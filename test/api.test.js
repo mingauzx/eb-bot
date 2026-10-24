@@ -12,7 +12,7 @@ process.env.DISCORD_CLIENT_ID='423456789012345678';
 process.env.DISCORD_CLIENT_SECRET='test-client-secret';
 process.env.DATABASE_URL='postgresql://mock';
 const userId='323456789012345678';
-let saved,queries=0,sent=0,roles=[allowedRoles[0]],memberStatus=200,roleChecks=0,exchanges=0;
+let saved,queries=0,sent=0,roles=[allowedRoles[0]],memberStatus=200,roleChecks=0,exchanges=0,tokenStatus=200,tokenError='';
 globalThis.__testPool=class {
  async query(sql,args){
   queries++;
@@ -37,7 +37,7 @@ test('OAuth, quatro cargos, revogação de acesso, configuração e teste',async
  const realFetch=globalThis.fetch;
  globalThis.fetch=async(url,options={})=>{
   let value,status=200;
-  if(url.endsWith('/oauth2/token')){exchanges++;value={access_token:'private-access-token'};}
+  if(url.endsWith('/oauth2/token')){exchanges++;status=tokenStatus;value=tokenStatus===200?{access_token:'private-access-token'}:{error:tokenError,error_description:'private-client-secret-never-expose'};}
   else if(url.endsWith('/oauth2/token/revoke'))value={};
   else if(url.includes('/members/')){roleChecks++;status=memberStatus;value={roles};}
   else if(url.includes('/channels/')&&options.method==='POST'){sent++;value={id:'message'};}
@@ -74,6 +74,22 @@ test('OAuth, quatro cargos, revogação de acesso, configuração e teste',async
   roles=[];
   const denied=await flow();
   assert.equal((await request('/api/auth/callback?code=test&state='+encodeURIComponent(denied.state),'GET',undefined,denied.cookie)).headers.Location,'/?auth_error=forbidden');
+  for(const [status,error,expected] of [[401,'invalid_client','oauth_client'],[400,'invalid_grant','oauth_code'],[400,'invalid_request','oauth_code'],[503,'server_error','oauth_unavailable']]){
+   tokenStatus=status;tokenError=error;
+   const f=await flow();
+   const result=await request('/api/auth/callback?code=test&state='+encodeURIComponent(f.state),'GET',undefined,f.cookie);
+   assert.equal(result.headers.Location,'/?auth_error='+expected);
+   assert.equal(result.headers['Set-Cookie'].includes('eb_session='),false);
+   assert.equal(JSON.stringify(result).includes('private-client-secret'),false);
+  }
+  tokenStatus=200;roles=[allowedRoles[0]];
+  for(const [status,expected] of [[401,'bot_token'],[403,'bot_access'],[404,'member_missing'],[429,'bot_rate_limit']]){
+   memberStatus=status;const f=await flow();
+   const result=await request('/api/auth/callback?code=test&state='+encodeURIComponent(f.state),'GET',undefined,f.cookie);
+   assert.equal(result.headers.Location,'/?auth_error='+expected);
+   assert.equal(result.headers['Set-Cookie'].includes('eb_session='),false);
+  }
+  memberStatus=200;roles=[];
   const cookie='eb_session='+session(userId);
   const before=queries;
   for(const [url,method,body] of [['/api/config','GET'],['/api/channels','GET'],['/api/config','PUT',defaults],['/api/test','POST',{}],['/api/session','GET']]){

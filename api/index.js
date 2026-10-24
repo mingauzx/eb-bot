@@ -1,7 +1,7 @@
 import {defaults,validate,guildId,message} from '../lib/config.js';
 import {getConfig,saveConfig,limit} from '../lib/db.js';
 import {session,identity,cookie,oauthState,stateCookie,validState} from '../lib/auth.js';
-import {origin,authorizationUrl,exchangeIdentity,requireRole} from '../lib/oauth.js';
+import {origin,authorizationUrl,exchangeIdentity,requireRole,oauthErrorCodes} from '../lib/oauth.js';
 import {discord,channel} from '../lib/discord.js';
 export default async function handler(req,res) {
  const reply=(status,data)=>{res.statusCode=status;res.setHeader('Content-Type','application/json');res.end(JSON.stringify(data));};
@@ -27,7 +27,8 @@ export default async function handler(req,res) {
     return redirect('/');
    }catch(e){
     console.error('Falha OAuth:',e.code||e.status||e.name);
-    return redirect('/?auth_error='+(e.status===403?'forbidden':e.code==='AUTH_SETUP'?'setup':'oauth'));
+    const code=oauthErrorCodes.has(e.code)?e.code:e.status===403?'forbidden':e.code==='AUTH_SETUP'?'setup':e.name==='TimeoutError'||e.name==='TypeError'?'oauth_unavailable':'oauth';
+    return redirect('/?auth_error='+code);
    }
   }
   if(!['GET','POST','PUT'].includes(req.method))return reply(405,{error:'Método não permitido.'});

@@ -60,6 +60,17 @@ $('test').onclick=async()=>{if(dirty)return notice('Salve as alterações antes 
 $('preview-image').onerror=()=>{$('preview-image').hidden=true;};
 window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});
 const authErrors={forbidden:'Acesso permitido somente a ADM, ADM Geral, Patrono e Criador do servidor.',state:'O login expirou ou não pertence a este navegador. Clique em Entrar com Discord novamente.',cancelled:'Autorização cancelada no Discord.',setup:'O login Discord ainda precisa ser configurado na hospedagem.',oauth:'Falha ao autorizar no Discord. Confira a configuração OAuth e tente novamente.'};
+Object.assign(authErrors,{
+ oauth_client:'O Discord recusou o Client ID ou Client Secret. Na Vercel, confira DISCORD_CLIENT_ID (Application ID) e DISCORD_CLIENT_SECRET (OAuth2 → Client Secret). O Client Secret é diferente do token do bot. Depois faça Redeploy.',
+ oauth_code:'O código de login expirou ou o endereço de retorno não coincide. Confira OAuth2 → Redirects no Discord: https://eb-bot.vercel.app/api/auth/callback. Abra o painel e clique em Entrar com Discord novamente.',
+ oauth_identity:'O Discord não confirmou sua identidade. Inicie o login novamente.',
+ oauth_unavailable:'Não foi possível concluir a conexão com o Discord. Aguarde e inicie o login novamente.',
+ bot_token:'Login identificado, mas o token do bot está ausente ou foi recusado. Confira DISCORD_TOKEN: deve ser o token da seção Bot, não o Client Secret. Depois faça Redeploy.',
+ bot_access:'Login identificado, mas o bot não consegue consultar o servidor. Confira se o bot foi convidado e se DISCORD_GUILD_ID é o ID do servidor EB do Alpha.',
+ member_missing:'Sua conta ou o bot não foi encontrado no servidor configurado. Confira se ambos estão no EB do Alpha e se DISCORD_GUILD_ID contém o ID desse servidor.',
+ guild_config:'Configure DISCORD_GUILD_ID com o ID do servidor EB do Alpha, não o ID de um cargo ou canal. Depois faça Redeploy.',
+ bot_rate_limit:'O Discord limitou as consultas. Aguarde um pouco e inicie o login novamente.'
+});
 const authError=new URLSearchParams(location.search).get('auth_error');
 if(authError){notice(authErrors[authError]||authErrors.oauth,true);history.replaceState(null,'','/');}
 try{await api('session');await load();}catch(e){show(false);if(!authError&&e.message!=='Entre com Discord para continuar.')notice(e.message,true);}
