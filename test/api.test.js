@@ -40,6 +40,9 @@ test('OAuth, quatro cargos, revogação de acesso, configuração e teste',async
   if(url.endsWith('/oauth2/token')){exchanges++;status=tokenStatus;value=tokenStatus===200?{access_token:'private-access-token'}:{error:tokenError,error_description:'private-client-secret-never-expose'};}
   else if(url.endsWith('/oauth2/token/revoke'))value={};
   else if(url.includes('/members/')){roleChecks++;status=memberStatus;value={roles};}
+  else if(url.endsWith('/channels'))value=[{id:'223456789012345678',name:'boas-vindas',type:0}];
+  else if(url.endsWith('/roles'))value=[{id:'1545550460763770993',name:'ADM',position:1}];
+  else if(url.endsWith('/emojis'))value=[{id:'523456789012345678',name:'alpha',animated:true}];
   else if(url.includes('/channels/')&&options.method==='POST'){sent++;value={id:'message'};}
   else if(url.includes('/channels/'))value={id:'223456789012345678',guild_id:process.env.DISCORD_GUILD_ID,type:0};
   else if(url.endsWith('/users/@me'))value={id:userId,username:'Alpha'};
@@ -92,7 +95,7 @@ test('OAuth, quatro cargos, revogação de acesso, configuração e teste',async
   memberStatus=200;roles=[];
   const cookie='eb_session='+session(userId);
   const before=queries;
-  for(const [url,method,body] of [['/api/config','GET'],['/api/channels','GET'],['/api/config','PUT',defaults],['/api/test','POST',{}],['/api/session','GET']]){
+  for(const [url,method,body] of [['/api/resources','GET'],['/api/config','GET'],['/api/channels','GET'],['/api/config','PUT',defaults],['/api/test','POST',{}],['/api/session','GET']]){
    assert.equal((await request(url,method,body,cookie)).status,403);
   }
   assert.equal(queries,before);assert.equal(sent,0);
@@ -103,6 +106,8 @@ test('OAuth, quatro cargos, revogação de acesso, configuração e teste',async
   memberStatus=200;roles=[allowedRoles[0]];
   assert.equal((await request('/api/session','GET',undefined,cookie)).status,200);
   assert.equal((await request('/api/config','PUT',defaults,cookie,'https://evil.example')).status,403);
+  const resources=await request('/api/resources','GET',undefined,cookie);
+  assert.equal(resources.status,200);assert.equal(resources.body.emojis[0].mention,'<a:alpha:523456789012345678>');assert.equal(resources.body.channels[0].name,'boas-vindas');assert.equal(resources.body.roles[0].name,'ADM');assert.equal(JSON.stringify(resources).includes(process.env.DISCORD_TOKEN),false);
   const c={...defaults,channelId:'223456789012345678',enabled:true};
   assert.equal((await request('/api/config','PUT',c,cookie)).status,200);
   assert.deepEqual((await request('/api/config','GET',undefined,cookie)).body,c);

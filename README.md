@@ -8,6 +8,9 @@ Dashboard administrativo escuro e responsivo, API Node.js preparada para Vercel 
 - Personalizar título, descrição, cor e GIF/banner.
 - Adicionar de zero a cinco botões de link, com nome, emoji opcional e estado ativo/inativo.
 - Prévia ao vivo, aviso de alterações não salvas e mensagem de teste.
+- Components V2 por padrão: container amplo, texto, GIF/banner e botões no mesmo bloco; embed tradicional opcional.
+- Galeria pesquisável de emojis do servidor e seletor de emoji em cada botão.
+- Seletores para inserir canais e cargos pelo nome, sem copiar IDs.
 - Variáveis: `{username}`, `{member}`, `{server}`, `{count}`.
 - Login Discord OAuth2 e sessão individual de oito horas em cookie HttpOnly; cargos conferidos no backend a cada requisição; verificação de origem e limite persistente de testes.
 - Token do Discord usado exclusivamente no backend/bot.
@@ -119,6 +122,14 @@ docker logs -f eb-alpha-welcome
 ```
 
 O Dockerfile inicia apenas o bot. Para o painel, use a Vercel. Se o bot está em outro host, não precisa expor uma API pública entre os dois: ambos acessam o mesmo PostgreSQL.
+
+## Editor e Components V2
+
+Em Formato da mensagem, escolha Mensagem ampla • Components V2 ou Embed tradicional. Configurações antigas sem formato usam Components V2. Salve antes do teste. O formato usa a flag IS_COMPONENTS_V2, Container, Text Display e Media Gallery, sem misturar embeds com componentes V2. A largura real é controlada pelo cliente Discord; a prévia é aproximada. O texto V2 tem limite total de 4.000 caracteres; após substituir variáveis, o corpo é limitado para reservar espaço ao rodapé.
+
+Em Inserir do servidor, selecione título ou descrição. Clique no emoji, canal ou cargo para inserir na posição do cursor. Emojis animados são preservados. Nos botões, escolha o emoji no seletor ou digite um emoji Unicode manualmente. Atualizar servidor recarrega nomes e emojis sem apagar o texto da mensagem. Os nomes e imagens aparecem na prévia; HTML de nomes/textos nunca é executado. Cargos são menções visuais, sem notificações em massa. O servidor não permite @everyone/@here pelas configurações de allowed_mentions.
+
+O endpoint autenticado /api/resources carrega apenas emojis/canais/cargos do servidor configurado, verificando os mesmos quatro cargos autorizados antes da consulta. Se uma categoria falhar, o editor mostra aviso e mantém as outras categorias. Emojis restritos por cargos ainda estão sujeitos às regras de uso do Discord: confira o envio com a mensagem teste.
 
 ## Verificação e operação
 

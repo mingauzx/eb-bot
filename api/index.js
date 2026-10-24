@@ -3,6 +3,7 @@ import {getConfig,saveConfig,limit} from '../lib/db.js';
 import {session,identity,cookie,oauthState,stateCookie,validState} from '../lib/auth.js';
 import {origin,authorizationUrl,exchangeIdentity,requireRole,oauthErrorCodes} from '../lib/oauth.js';
 import {discord,channel} from '../lib/discord.js';
+import {guildResources} from '../lib/resources.js';
 export default async function handler(req,res) {
  const reply=(status,data)=>{res.statusCode=status;res.setHeader('Content-Type','application/json');res.end(JSON.stringify(data));};
  res.setHeader('Cache-Control','no-store');
@@ -47,6 +48,7 @@ export default async function handler(req,res) {
   await requireRole(userId);
   if(path==='/api/session'&&req.method==='GET')return reply(200,{ok:true,userId});
   const guild=guildId();
+  if(path==='/api/resources'&&req.method==='GET')return reply(200,await guildResources(guild));
   if(path==='/api/config'&&req.method==='GET')return reply(200,await getConfig(guild)||defaults);
   if(path==='/api/channels'&&req.method==='GET') {
    const channels=await discord('/guilds/'+guild+'/channels');
