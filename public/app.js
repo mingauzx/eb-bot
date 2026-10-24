@@ -4,7 +4,7 @@ let config=structuredClone(defaults),dirty=false,loading=false;
 function notice(text,error=false){$('notice').textContent=text;$('notice').classList.toggle('error',error);}
 async function api(path,method='GET',data){
  const r=await fetch('/api/'+path,{method,headers:method==='GET'?{}:{'Content-Type':'application/json'},body:data?JSON.stringify(data):undefined});
- const value=await r.json();if(!r.ok){if(r.status===401)show(false);throw new Error(value.error||'Falha na solicitação.');}return value;
+ const value=await r.json();if(!r.ok){if(r.status===401||r.status===403)show(false);throw new Error(value.error||'Falha na solicitação.');}return value;
 }
 function show(logged){$('dashboard').hidden=!logged;$('logout').hidden=!logged;$('login').hidden=logged;}
 function read(){for(const k of ['channelId','title','description','color','bannerUrl'])config[k]=$(k).value;config.enabled=$('enabled').checked;return config;}
@@ -50,7 +50,6 @@ async function load(){
  await channels();buttonEditors();preview();dirty=false;$('dirty').textContent='O teste usa a última configuração salva.';show(true);notice('');
  }catch(e){notice(e.message,true);}finally{loading=false;}
 }
-$('login-form').onsubmit=async e=>{e.preventDefault();const b=e.submitter;b.disabled=true;try{await api('login','POST',{password:$('password').value});$('password').value='';await load();}catch(e){notice(e.message,true);}finally{b.disabled=false;}};
 $('logout').onclick=async()=>{try{await api('logout','POST',{});show(false);notice('Sessão encerrada.');}catch(e){notice(e.message,true);}};
 $('settings').oninput=()=>{if(!loading)changed();};
 $('settings').onchange=()=>{if(!loading)changed();};
@@ -60,4 +59,7 @@ $('reload').onclick=async()=>{try{await channels();notice('Canais atualizados.')
 $('test').onclick=async()=>{if(dirty)return notice('Salve as alterações antes de enviar o teste.',true);$('test').disabled=true;try{await api('test','POST',{});notice('Mensagem de teste enviada ao canal configurado.');}catch(e){notice(e.message,true);}finally{$('test').disabled=false;}};
 $('preview-image').onerror=()=>{$('preview-image').hidden=true;};
 window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});
-try{await api('session');await load();}catch{show(false);}
+const authErrors={forbidden:'Acesso permitido somente a ADM, ADM Geral, Patrono e Criador do servidor.',state:'O login expirou ou não pertence a este navegador. Clique em Entrar com Discord novamente.',cancelled:'Autorização cancelada no Discord.',setup:'O login Discord ainda precisa ser configurado na hospedagem.',oauth:'Falha ao autorizar no Discord. Confira a configuração OAuth e tente novamente.'};
+const authError=new URLSearchParams(location.search).get('auth_error');
+if(authError){notice(authErrors[authError]||authErrors.oauth,true);history.replaceState(null,'','/');}
+try{await api('session');await load();}catch(e){show(false);if(!authError&&e.message!=='Entre com Discord para continuar.')notice(e.message,true);}

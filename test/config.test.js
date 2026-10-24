@@ -25,7 +25,7 @@ test('cinco botões ativos e emojis personalizados são serializados',()=>{
 });
 test('sessão válida, adulterada e expirada',()=>{
  process.env.SESSION_SECRET='test-only-secret-with-more-than-32-characters';
- const token=session();assert.equal(authenticated({headers:{cookie:'eb_session='+token}}),true);
+ const token=session(member.id);assert.equal(authenticated({headers:{cookie:'eb_session='+token}}),true);
  assert.equal(authenticated({headers:{cookie:'eb_session='+token+'x'}}),false);
  assert.equal(authenticated({headers:{}}),false);
  const real=Date.now;Date.now=()=>real()+9*3600000;

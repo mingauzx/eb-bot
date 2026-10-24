@@ -9,7 +9,7 @@ Dashboard administrativo escuro e responsivo, API Node.js preparada para Vercel 
 - Adicionar de zero a cinco botões de link, com nome, emoji opcional e estado ativo/inativo.
 - Prévia ao vivo, aviso de alterações não salvas e mensagem de teste.
 - Variáveis: `{username}`, `{member}`, `{server}`, `{count}`.
-- Sessão administrativa de oito horas em cookie HttpOnly; verificação de origem e limites persistentes de login/testes.
+- Login Discord OAuth2 e sessão individual de oito horas em cookie HttpOnly; cargos conferidos no backend a cada requisição; verificação de origem e limite persistente de testes.
 - Token do Discord usado exclusivamente no backend/bot.
 
 ## Arquitetura
@@ -53,11 +53,35 @@ No PowerShell, use `Copy-Item .env.example .env` no lugar de cp. Abra http://loc
 | DISCORD_TOKEN | Sim | Sim | Token do bot; somente servidor |
 | DISCORD_GUILD_ID | Sim | Sim | ID do servidor alvo |
 | APP_ORIGIN | Sim | Não | Origem exata do dashboard, sem caminho (ex.: https://eb-bot.vercel.app) |
-| ADMIN_PASSWORD | Sim | Não | Senha forte, exclusiva, com pelo menos 16 caracteres |
+| DISCORD_CLIENT_ID | Sim | Não | Application ID da aplicação Discord do bot |
+| DISCORD_CLIENT_SECRET | Sim | Não | Client Secret em OAuth2; não é o token do bot |
 | SESSION_SECRET | Sim | Não | Segredo aleatório de pelo menos 32 caracteres |
 | PORT | Local | Não | Porta local, padrão 3000 |
 
-Gere SESSION_SECRET localmente com `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"`. O login é de administração compartilhada por senha, sem OAuth ou papéis individuais. Trocar SESSION_SECRET invalida todas as sessões; trocar ADMIN_PASSWORD não encerra sessões já existentes, portanto altere ambos para revogar acessos.
+Gere SESSION_SECRET localmente com `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"`. Este segredo assina cookies; não é uma senha para o usuário. Trocar SESSION_SECRET invalida todas as sessões. ADMIN_PASSWORD não é mais usada e pode ser removida da Vercel. As sessões antigas de senha são rejeitadas.
+
+### Login Discord e cargos autorizados
+
+No [Discord Developer Portal](https://discord.com/developers/applications), abra a aplicação do bot:
+
+1. Em **General Information**, copie **Application ID** para DISCORD_CLIENT_ID.
+2. Em **OAuth2**, copie **Client Secret** para DISCORD_CLIENT_SECRET. Nunca publique nem envie esse segredo pelo chat.
+3. Em **OAuth2 → Redirects**, adicione exatamente **https://eb-bot.vercel.app/api/auth/callback**. Se usar outro domínio, use o mesmo domínio de APP_ORIGIN seguido de /api/auth/callback.
+4. Salve no Discord, configure as variáveis na Vercel para Production e faça Redeploy.
+5. No painel, clique em **Entrar com Discord** e autorize sua conta. O único escopo solicitado é identify; email e lista de servidores não são coletados.
+
+Para desenvolvimento local, adicione também http://localhost:3000/api/auth/callback aos Redirects e use APP_ORIGIN=http://localhost:3000.
+
+O backend usa o token do bot para consultar o membro no servidor de DISCORD_GUILD_ID, tanto no callback quanto em cada leitura/salvamento/teste. Não há acesso implícito por permissão Administrator, posição hierárquica ou propriedade do servidor: é obrigatório possuir pelo menos um dos cargos abaixo.
+
+| Cargo | ID |
+| --- | --- |
+| ADM | 1545550460763770993 |
+| ADM Geral | 1545550460763770996 |
+| Patrono | 1562882324104876062 |
+| Criador | 1545550460763770997 |
+
+A lista está em lib/oauth.js. Quem não está no servidor ou não tem um desses cargos recebe acesso negado. Falhas na API Discord bloqueiam o acesso. A remoção de cargo bloqueia a próxima requisição, sem esperar a sessão expirar. O estado OAuth é assinado, vinculado ao navegador por cookie HttpOnly SameSite=Lax e expira em dez minutos. O token OAuth é usado no servidor para identificar a conta e sua revogação é solicitada em seguida; não é armazenado nem enviado ao navegador.
 
 A migração é idempotente e cria welcome_settings e request_limits. Rode uma vez antes de usar cada banco. Não ocorre automaticamente em cada requisição e não acontece durante o build da Vercel. Se usar Preview Deployments, utilize banco/servidor de teste separados ou não configure segredos nas previews.
 
@@ -66,10 +90,10 @@ A migração é idempotente e cria welcome_settings e request_limits. Rode uma v
 1. **Add New → Project → Import Git Repository → mingauzx/eb-bot**.
 2. **Root Directory:** raiz do repositório. **Framework Preset:** Other.
 3. **Install Command:** npm install. **Build Command:** npm run build. **Output Directory:** public. O vercel.json já contém essas definições e encaminha /api/* para a função Node.js.
-4. Adicione as seis variáveis do dashboard da tabela acima. Use Node.js **24.x**.
+4. Adicione as variáveis do dashboard da tabela acima. Use Node.js **24.x**.
 5. Defina APP_ORIGIN com a URL final do projeto (por exemplo https://eb-bot.vercel.app). Depois de conhecer a URL real, ajuste a variável e faça Redeploy. Caso use domínio próprio, atualize APP_ORIGIN e faça outro deploy.
 6. Execute `npm run db:init` localmente com a DATABASE_URL do banco escolhido antes de acessar o painel.
-7. Abra a URL HTTPS, entre com ADMIN_PASSWORD, escolha canal e personalize a mensagem. Salve, envie teste e depois ative o sistema.
+7. Abra a URL HTTPS, entre com Discord usando uma conta com um cargo autorizado, escolha canal e personalize a mensagem. Salve, envie teste e depois ative o sistema.
 
 O frontend **não** precisa de variáveis públicas e nenhum segredo deve receber prefixo NEXT_PUBLIC_ ou VITE_. A Vercel publica apenas public/ e as rotas da API; arquivos de bot e .env não são disponibilizados como assets. **Não inicie o bot no build nem em uma Vercel Function:** a conexão Gateway exige processo contínuo.
 
@@ -105,9 +129,9 @@ npm run check
 
 Os testes cobrem validação, variáveis, imagens, limite e estado de botões, menções, sessões e fluxo HTTP de login/salvamento/teste, usando banco e Discord simulados. O teste real exige credenciais: salve o canal, envie um teste e faça uma conta de teste entrar no servidor, confirmando a recepção e os botões. Desative a recepção e repita a entrada para verificar que não envia. Não há envio de mensagens nem acesso ao banco durante os testes unitários.
 
-Se o login falhar: confira APP_ORIGIN exato, senha/segredo e migração. Se uma entrada não gerar mensagem: confira processo do bot, intent Server Members, sistema ativado, canal, banco compartilhado e permissões. Se a imagem não carregar, use uma URL HTTPS pública e direta para o arquivo, sem autenticação. A prévia é aproximada, com texto seguro sem executar HTML; o Discord renderiza Markdown na mensagem final.
+Se o login falhar: confira APP_ORIGIN exato, Client ID, Client Secret, SESSION_SECRET, Redirects no Discord e a presença do bot no servidor. O login Discord não depende do banco; carregar/salvar configurações exige banco e migração. Se uma entrada não gerar mensagem: confira processo do bot, intent Server Members, sistema ativado, canal, banco compartilhado e permissões. Se a imagem não carregar, use uma URL HTTPS pública e direta para o arquivo, sem autenticação. A prévia é aproximada, com texto seguro sem executar HTML; o Discord renderiza Markdown na mensagem final.
 
-Limites de login são persistentes por IP (10 tentativas/15 minutos) e testes por servidor (3/minuto). Em execução local, IP é o endereço do socket; na Vercel usa o cabeçalho de IP fornecido pela plataforma. Para uso atrás de outro proxy, adapte a identificação de IP confiável. Pode remover registros antigos periodicamente com `DELETE FROM request_limits WHERE expires_at < NOW() - INTERVAL '1 day';`.
+Testes de mensagem têm limite persistente por servidor (3/minuto). Pode remover registros antigos periodicamente com `DELETE FROM request_limits WHERE expires_at < NOW() - INTERVAL '1 day';`.
 
 ## Referências
 

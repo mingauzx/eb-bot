@@ -1,7 +1,7 @@
 import {createServer} from 'node:http';
 import {readFile} from 'node:fs/promises';
 import handler from './api/index.js';
-const paths={'/':'index.html','/app.js':'app.js','/style.css':'style.css'};
+const paths={'/':'index.html','/app.js':'app.js','/config.js':'config.js','/style.css':'style.css'};
 createServer(async(req,res)=>{
  const path=new URL(req.url,'http://localhost').pathname;
  if(path.startsWith('/api/'))return handler(req,res);
