@@ -1,4 +1,4 @@
-export const defaults = { enabled:false, format:'components_v2', channelId:'', title:'Bem-vindo ao EB do Alpha, {username}!', description:'{member}, sua jornada começa aqui. Leia as regras e apresente-se à tropa.\n\nVocê é o integrante nº {count} do {server}.', color:'#8fa66a', bannerUrl:'', buttons:[] };
+export const defaults = { enabled:false, format:'components_v2', channelId:'', title:'Bem-vindo ao EB do Alpha, {username}!', description:'{member}, sua jornada começa aqui. Leia as regras e apresente-se à tropa.\n\nVocê é o integrante nº {count} do {server}.', infoText:'', closingTitle:'', closingText:'', footerText:'EB DO ALPHA • BOAS-VINDAS', color:'#8fa66a', bannerUrl:'', buttons:[] };
 const id = /^\d{17,20}$/;
 export function guildId() {
  const value=process.env.DISCORD_GUILD_ID;
@@ -21,7 +21,12 @@ export function validate(input) {
   if(typeof input[key]!=='string'||!input[key].trim()||input[key].length>max) throw new Error('Título ou descrição inválidos.');
   c[key]=input[key].trim();
  }
- if(c.format==='components_v2'&&c.title.length+c.description.length+50>4000)throw new Error('No Components V2, reduza título e descrição para somarem até 3950 caracteres.');
+ for(const [key,max] of [['infoText',1500],['closingTitle',100],['closingText',800],['footerText',500]]){
+  const value=input[key]??defaults[key];
+  if(typeof value!=='string'||value.length>max)throw new Error('O campo '+key+' ultrapassou o limite permitido.');
+  c[key]=value.trim();
+ }
+ if(c.format==='components_v2'&&['title','description','infoText','closingTitle','closingText','footerText'].reduce((n,key)=>n+c[key].length,30)>4000)throw new Error('No Components V2, os textos de todos os blocos devem somar até 3970 caracteres.');
  if(!/^#[0-9a-f]{6}$/i.test(input.color)) throw new Error('Cor inválida.');
  c.color=input.color;
  c.bannerUrl=String(input.bannerUrl||'').trim();
@@ -46,15 +51,31 @@ export function message(c,member) {
   return out;
  });
  const allowed_mentions={parse:[],users:[member.id]};
+ const info=render(c.infoText??defaults.infoText,member);
+ const closingTitle=render(c.closingTitle??defaults.closingTitle,member);
+ const closingText=render(c.closingText??defaults.closingText,member);
+ const footer=render(c.footerText??defaults.footerText,member);
+ const closing=[closingTitle?'**'+closingTitle+'**':'',closingText].filter(Boolean).join('\n');
  if((c.format??'components_v2')==='components_v2'){
-  const text=('# '+render(c.title,member).slice(0,256)+'\n\n'+render(c.description,member)).slice(0,3900);
-  const components=[{type:10,content:text}];
+  const components=[];
+  let budget=4000;
+  function text(value){if(value&&budget>0){const content=value.slice(0,budget);budget-=content.length;components.push({type:10,content});}}
+  function separator(){components.push({type:14,divider:true,spacing:1});}
+  text('## '+render(c.title,member).slice(0,256));
   if(c.bannerUrl)components.push({type:12,items:[{media:{url:c.bannerUrl},description:'Banner do EB do Alpha'}]});
+  // Reserve o espaço do rodapé antes de substituir variáveis em textos longos.
+  const footerContent=footer?('-# '+footer).slice(0,503):'';
+  budget-=footerContent.length;
+  text(render(c.description,member));
+  if(info&&budget>0){separator();text(info);}
+  if(closing&&budget>0){separator();text(closing);}
   if(buttons.length)components.push({type:14,divider:true,spacing:1},{type:1,components:buttons});
-  components.push({type:10,content:'-# EB DO ALPHA • BOAS-VINDAS'});
+  if(footerContent)components.push({type:10,content:footerContent});
   return {flags:32768,components:[{type:17,accent_color:parseInt(c.color.slice(1),16),components}],allowed_mentions};
  }
- const embed={title:render(c.title,member).slice(0,256),description:render(c.description,member).slice(0,4096),color:parseInt(c.color.slice(1),16),footer:{text:'EB DO ALPHA • BOAS-VINDAS'}};
+ const description=[render(c.description,member),info,closing].filter(Boolean).join('\n\n').slice(0,4096);
+ const embed={title:render(c.title,member).slice(0,256),description,color:parseInt(c.color.slice(1),16)};
+ if(footer)embed.footer={text:footer.slice(0,500)};
  if(c.bannerUrl) embed.image={url:c.bannerUrl};
  return {embeds:[embed],components:buttons.length?[{type:1,components:buttons}]:[],allowed_mentions:{parse:[],users:[member.id]}};
 }

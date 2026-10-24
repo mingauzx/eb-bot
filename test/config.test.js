@@ -51,3 +51,33 @@ test('V2 sem imagem/botões e limite após substituir variáveis',()=>{
  assert.throws(()=>validate({...defaults,format:'arbitrary'}));
  const old={...defaults};delete old.format;assert.equal(message(old,member).flags,32768);
 });
+
+test('blocos V2 na ordem: cabeçalho, banner, boas-vindas, informações, fechamento e rodapé',()=>{
+ const c=validate({...defaults,bannerUrl:'https://example.com/banner.gif',infoText:'Leia <#223456789012345678>',closingTitle:'Disciplina • Honra • Lealdade',closingText:'Boa jornada, {username}!',footerText:'Rodapé personalizado'});
+ const list=message(c,member).components[0].components;
+ assert.equal(list[0].type,10);assert.equal(list[1].type,12);
+ assert.match(list[2].content,/sua jornada/);
+ assert.deepEqual(list[3],{type:14,divider:true,spacing:1});
+ assert.equal(list[4].content,c.infoText);
+ assert.equal(list[5].type,14);assert.match(list[6].content,/\*\*Disciplina/);
+ assert.match(list[6].content,/Boa jornada, Mingau!/);
+ assert.equal(list.at(-1).content,'-# Rodapé personalizado');
+});
+test('blocos opcionais vazios são omitidos e payload completo respeita limite',()=>{
+ const c=validate({...defaults,footerText:''});
+ const simple=message(c,member).components[0].components;
+ assert.equal(simple.length,2);assert.equal(simple.some(x=>x.type===14),false);
+ const huge={...defaults,title:'{server}',description:'{server}'.repeat(100),infoText:'{server}'.repeat(20),closingTitle:'Final',closingText:'Até mais',footerText:'Rodapé'};
+ const list=message(huge,{...member,server:'s'.repeat(100)}).components[0].components;
+ assert.ok(list.filter(x=>x.type===10).reduce((sum,c)=>sum+c.content.length,0)<=4000);
+ assert.equal(list.at(-1).content,'-# Rodapé');
+ assert.throws(()=>validate({...defaults,infoText:'x'.repeat(1501)}));
+ assert.throws(()=>validate({...defaults,footerText:'x'.repeat(501)}));
+});
+test('embed tradicional preserva blocos e rodapé editados',()=>{
+ const c=validate({...defaults,format:'embed',infoText:'Informações',closingTitle:'Lema',closingText:'Texto final',footerText:'Meu rodapé'});
+ const embed=message(c,member).embeds[0];
+ assert.match(embed.description,/Informações/);assert.match(embed.description,/Texto final/);
+ assert.equal(embed.footer.text,'Meu rodapé');
+ const empty=message({...c,footerText:''},member).embeds[0];assert.equal('footer' in empty,false);
+});

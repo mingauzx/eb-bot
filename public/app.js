@@ -2,22 +2,27 @@ import {defaults,validate,render} from './config.js';
 const $=id=>document.getElementById(id);
 let config=structuredClone(defaults),dirty=false,loading=false;
 let resources={channels:[],roles:[],emojis:[],warnings:[]};
-const selections={title:{start:0,end:0},description:{start:0,end:0}};
+const textFields=['title','description','infoText','closingTitle','closingText','footerText'];
+const selections=Object.fromEntries(textFields.map(id=>[id,{start:0,end:0}]));
 function notice(text,error=false){$('notice').textContent=text;$('notice').classList.toggle('error',error);}
 async function api(path,method='GET',data){
  const r=await fetch('/api/'+path,{method,headers:method==='GET'?{}:{'Content-Type':'application/json'},body:data?JSON.stringify(data):undefined});
  const value=await r.json();if(!r.ok){if(r.status===401||r.status===403)show(false);throw new Error(value.error||'Falha na solicitação.');}return value;
 }
 function show(logged){$('dashboard').hidden=!logged;$('logout').hidden=!logged;$('login').hidden=logged;}
-function read(){for(const k of ['channelId','title','description','color','bannerUrl','format'])config[k]=$(k).value;config.enabled=$('enabled').checked;return config;}
+function read(){for(const k of ['channelId','title','description','infoText','closingTitle','closingText','footerText','color','bannerUrl','format'])config[k]=$(k).value;config.enabled=$('enabled').checked;return config;}
 function changed(){dirty=true;$('dirty').textContent='Alterações não salvas. Salve antes de enviar um teste.';preview();}
 function preview(){
  const c=read(), member={id:'123456789012345678',username:'Novo integrante',server:'EB do Alpha',count:1250};
  previewText($('preview-title'),render(c.title,member));
  $('embed').classList.toggle('wide-message',c.format==='components_v2');
  const buttons=$('preview-buttons');
- if(c.format==='components_v2')$('embed').insertBefore(buttons,$('embed').lastElementChild);else $('embed').after(buttons);
+ if(c.format==='components_v2')$('embed').insertBefore(buttons,$('preview-footer'));else $('embed').after(buttons);
  previewText($('preview-description'),render(c.description,member).replace('<@123456789012345678>','@Novo integrante'));
+ previewText($('preview-info'),render(c.infoText,member));$('preview-info-block').hidden=!c.infoText.trim();
+ previewText($('preview-closing-title'),render(c.closingTitle,member));
+ previewText($('preview-closing'),render(c.closingText,member));$('preview-closing-block').hidden=!(c.closingTitle.trim()||c.closingText.trim());
+ previewText($('preview-footer'),render(c.footerText,member));$('preview-footer').hidden=!c.footerText.trim();
  $('embed').style.borderLeftColor=c.color;
  const img=$('preview-image');try{const u=new URL(c.bannerUrl);if(u.protocol!=='https:')throw Error();if(img.src!==u.href)img.src=u.href;img.hidden=false;}catch{img.hidden=true;img.removeAttribute('src');}
  $('preview-buttons').replaceChildren();
@@ -58,8 +63,8 @@ async function channels(){
  $('channelId').value=selected;
 }
 async function load(){
- loading=true;try{config=await api('config');config.format??='components_v2';for(const k of ['title','description','color','bannerUrl','format'])$(k).value=config[k];$('enabled').checked=config.enabled;
- for(const id of ['title','description'])selections[id]={start:$(id).value.length,end:$(id).value.length};
+ loading=true;try{config={...defaults,...await api('config')};config.format??='components_v2';for(const k of ['title','description','infoText','closingTitle','closingText','footerText','color','bannerUrl','format'])$(k).value=config[k];$('enabled').checked=config.enabled;
+ for(const id of textFields)selections[id]={start:$(id).value.length,end:$(id).value.length};
  await channels();buttonEditors();preview();dirty=false;$('dirty').textContent='O teste usa a última configuração salva.';show(true);notice('');await loadResources();
  }catch(e){notice(e.message,true);}finally{loading=false;}
 }
@@ -75,10 +80,16 @@ window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.return
 
 function previewText(element,text){
  element.replaceChildren();
+ function plain(value){
+  let last=0;for(const match of value.matchAll(/\*\*([^*\n]+)\*\*/g)){
+   element.append(document.createTextNode(value.slice(last,match.index)));
+   const bold=document.createElement('b');bold.textContent=match[1];element.append(bold);last=match.index+match[0].length;
+  }element.append(document.createTextNode(value.slice(last)));
+ }
  const pattern=/<(a?):(\w{2,32}):(\d{17,20})>|<#(\d{17,20})>|<@&(\d{17,20})>/g;
  let last=0;
  for(const m of text.matchAll(pattern)){
-  element.append(document.createTextNode(text.slice(last,m.index)));
+  plain(text.slice(last,m.index));
   if(m[3]){
    const img=document.createElement('img');img.className='custom-emoji';img.src='https://cdn.discordapp.com/emojis/'+m[3]+(m[1]?'.gif':'.png')+'?size=48';img.alt=':'+m[2]+':';img.loading='lazy';element.append(img);
   }else{
@@ -87,7 +98,7 @@ function previewText(element,text){
   }
   last=m.index+m[0].length;
  }
- element.append(document.createTextNode(text.slice(last)));
+ plain(text.slice(last));
 }
 function insertText(text){
  const id=$('insert-target').value,field=$(id),range=selections[id];
@@ -95,7 +106,7 @@ function insertText(text){
  if(field.value.length-(end-start)+text.length>field.maxLength)return notice('O campo atingiu o limite de caracteres.',true);
  field.setRangeText(text,start,end,'end');field.focus();selections[id]={start:field.selectionStart,end:field.selectionEnd};changed();
 }
-for(const id of ['title','description']){
+for(const id of textFields){
  const track=()=>{selections[id]={start:$(id).selectionStart,end:$(id).selectionEnd};$('insert-target').value=id;};
  for(const event of ['focus','click','keyup','select','input'])$(id).addEventListener(event,track);
 }
@@ -123,6 +134,11 @@ async function loadResources(){
   $('resource-status').textContent=resources.warnings.length?'Não foi possível carregar: '+resources.warnings.map(x=>labels[x]).join(', ')+'. Confira o acesso do bot e atualize.':resources.emojis.length+' emojis • '+resources.channels.length+' canais • '+resources.roles.length+' cargos';
  }catch(e){$('resource-status').textContent=e.message;}finally{$('reload-resources').disabled=false;}
 }
+$('apply-template').onclick=()=>{
+ const template={title:'SAUDAÇÕES, MILITAR!',description:'**Seja bem-vindo ao Exército Brasileiro do Alpha, {member}!**\nÉ um prazer receber você em nossa comunidade!',infoText:'Acesse os canais informativos para conhecer nossa instituição, consultar os recursos oficiais e conferir as orientações necessárias para sua jornada.\n\nCaso tenha alguma dúvida ou precise realizar uma solicitação, abra um atendimento no nosso suporte. Nossa equipe está à disposição para auxiliá-lo.',closingTitle:'Disciplina • Honra • Lealdade',closingText:'Desejamos a você uma excelente jornada no Exército Brasileiro do Alpha!',footerText:'EB DO ALPHA • BOAS-VINDAS'};
+ for(const id of textFields){$(id).value=template[id];selections[id]={start:template[id].length,end:template[id].length};}
+ $('format').value='components_v2';changed();notice('Modelo aplicado. Escolha seu banner e insira canais e emojis antes de salvar.');
+};
 $('reload-resources').onclick=loadResources;
 $('emoji-search').oninput=emojiGallery;
 $('mention-channel').onchange=e=>{if(e.target.value)insertText('<#'+e.target.value+'>');e.target.value='';};
