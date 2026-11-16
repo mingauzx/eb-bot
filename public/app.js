@@ -13,7 +13,7 @@ function show(logged){$('dashboard').hidden=!logged;$('logout').hidden=!logged;$
 function read(){for(const k of ['channelId','title','description','infoText','closingTitle','closingText','footerText','color','bannerUrl','format'])config[k]=$(k).value;config.enabled=$('enabled').checked;return config;}
 function changed(){dirty=true;$('dirty').textContent='Alterações não salvas. Salve antes de enviar um teste.';preview();}
 function preview(){
- const c=read(), member={id:'123456789012345678',username:'Novo integrante',server:'EB do Alpha',count:1250};
+ const c=read(), member={id:'123456789012345678',username:'Novo integrante',server:'EB do Gandra',count:1250};
  previewText($('preview-title'),render(c.title,member));
  $('embed').classList.toggle('wide-message',c.format==='components_v2');
  const buttons=$('preview-buttons');
@@ -135,7 +135,7 @@ async function loadResources(){
  }catch(e){$('resource-status').textContent=e.message;}finally{$('reload-resources').disabled=false;}
 }
 $('apply-template').onclick=()=>{
- const template={title:'SAUDAÇÕES, MILITAR!',description:'**Seja bem-vindo ao Exército Brasileiro do Alpha, {member}!**\nÉ um prazer receber você em nossa comunidade!',infoText:'Acesse os canais informativos para conhecer nossa instituição, consultar os recursos oficiais e conferir as orientações necessárias para sua jornada.\n\nCaso tenha alguma dúvida ou precise realizar uma solicitação, abra um atendimento no nosso suporte. Nossa equipe está à disposição para auxiliá-lo.',closingTitle:'Disciplina • Honra • Lealdade',closingText:'Desejamos a você uma excelente jornada no Exército Brasileiro do Alpha!',footerText:'EB DO ALPHA • BOAS-VINDAS'};
+ const template={title:'SAUDAÇÕES, MILITAR!',description:'**Seja bem-vindo ao Exército Brasileiro do Alpha, {member}!**\nÉ um prazer receber você em nossa comunidade!',infoText:'Acesse os canais informativos para conhecer nossa instituição, consultar os recursos oficiais e conferir as orientações necessárias para sua jornada.\n\nCaso tenha alguma dúvida ou precise realizar uma solicitação, abra um atendimento no nosso suporte. Nossa equipe está à disposição para auxiliá-lo.',closingTitle:'Disciplina • Honra • Lealdade',closingText:'Desejamos a você uma excelente jornada no Exército Brasileiro do Alpha!',footerText:'EB DO GANDRA • BOAS-VINDAS'};
  for(const id of textFields){$(id).value=template[id];selections[id]={start:template[id].length,end:template[id].length};}
  $('format').value='components_v2';changed();notice('Modelo aplicado. Escolha seu banner e insira canais e emojis antes de salvar.');
 };
@@ -146,22 +146,64 @@ $('mention-role').onchange=e=>{if(e.target.value)insertText('<@&'+e.target.value
 
 const authErrors={forbidden:'Acesso permitido somente a ADM, ADM Geral, Patrono e Criador do servidor.',state:'O login expirou ou não pertence a este navegador. Clique em Entrar com Discord novamente.',cancelled:'Autorização cancelada no Discord.',setup:'O login Discord ainda precisa ser configurado na hospedagem.',oauth:'Falha ao autorizar no Discord. Confira a configuração OAuth e tente novamente.'};
 Object.assign(authErrors,{
- oauth_client:'O Discord recusou o Client ID ou Client Secret. Na Vercel, confira DISCORD_CLIENT_ID (Application ID) e DISCORD_CLIENT_SECRET (OAuth2 → Client Secret). O Client Secret é diferente do token do bot. Depois faça Redeploy.',
- oauth_code:'O código de login expirou ou o endereço de retorno não coincide. Confira OAuth2 → Redirects no Discord: https://eb-bot.vercel.app/api/auth/callback. Abra o painel e clique em Entrar com Discord novamente.',
+ oauth_client:'O Discord recusou o Client ID ou Client Secret. Na hospedagem, confira DISCORD_CLIENT_ID (Application ID) e DISCORD_CLIENT_SECRET (OAuth2 → Client Secret). O Client Secret é diferente do token do bot. Depois faça Redeploy.',
+ oauth_code:'O código de login expirou ou o endereço de retorno não coincide. Confira OAuth2 → Redirects no Discord: '+location.origin+'/api/auth/callback. Abra o painel e clique em Entrar com Discord novamente.',
  oauth_identity:'O Discord não confirmou sua identidade. Inicie o login novamente.',
  oauth_unavailable:'Não foi possível concluir a conexão com o Discord. Aguarde e inicie o login novamente.',
  bot_token:'Login identificado, mas o token do bot está ausente ou foi recusado. Confira DISCORD_TOKEN: deve ser o token da seção Bot, não o Client Secret. Depois faça Redeploy.',
- bot_access:'Login identificado, mas o bot não consegue consultar o servidor. Confira se o bot foi convidado e se DISCORD_GUILD_ID é o ID do servidor EB do Alpha.',
- member_missing:'Sua conta ou o bot não foi encontrado no servidor configurado. Confira se ambos estão no EB do Alpha e se DISCORD_GUILD_ID contém o ID desse servidor.',
- guild_config:'Configure DISCORD_GUILD_ID com o ID do servidor EB do Alpha, não o ID de um cargo ou canal. Depois faça Redeploy.',
+ bot_access:'Login identificado, mas o bot não consegue consultar o servidor. Confira se o bot foi convidado e se DISCORD_GUILD_ID é o ID do servidor EB do Gandra.',
+ member_missing:'Sua conta ou o bot não foi encontrado no servidor configurado. Confira se ambos estão no EB do Gandra e se DISCORD_GUILD_ID contém o ID desse servidor.',
+ guild_config:'Configure DISCORD_GUILD_ID com o ID do servidor EB do Gandra, não o ID de um cargo ou canal. Depois faça Redeploy.',
  bot_rate_limit:'O Discord limitou as consultas. Aguarde um pouco e inicie o login novamente.'
 });
 const promotionForm=$('promotion-form');
+const promotionEmojiPickers=[...promotionForm.querySelectorAll('[data-emoji-field]')];
+
+function drawPromotionEmojiPicker(picker){
+ const input=promotionForm.elements.namedItem(picker.dataset.emojiField);
+ const selected=resources.emojis.find(emoji=>emoji.mention===input.value);
+ const value=picker.querySelector('.promotion-emoji-value');
+ previewText(value,selected?selected.mention+' :'+selected.name+':':'Sem emoji');
+ const grid=picker.querySelector('.promotion-emoji-grid');
+ grid.replaceChildren();
+ if(!picker.open)return;
+ const query=picker.querySelector('.promotion-emoji-search').value.trim().toLowerCase();
+ const matches=resources.emojis.filter(emoji=>emoji.name.toLowerCase().includes(query));
+ if(!matches.length){
+  grid.textContent=query?'Nenhum emoji encontrado.':'Nenhum emoji personalizado disponível.';
+  return;
+ }
+ for(const emoji of matches){
+  const choice=document.createElement('button');
+  choice.type='button';
+  choice.className='ghost emoji-choice';
+  choice.title=':'+emoji.name+':';
+  choice.setAttribute('aria-label',choice.title);
+  choice.setAttribute('aria-pressed',String(emoji.mention===input.value));
+  const image=document.createElement('img');
+  image.src=emoji.url;
+  image.alt='';
+  image.loading='lazy';
+  choice.append(image);
+  choice.onclick=()=>choosePromotionEmoji(picker,emoji.mention);
+  grid.append(choice);
+ }
+}
+function choosePromotionEmoji(picker,value){
+ promotionForm.elements.namedItem(picker.dataset.emojiField).value=value;
+ picker.open=false;
+ drawPromotionEmojiPicker(picker);
+ updatePromotionPreview();
+ picker.querySelector('summary').focus();
+}
+for(const picker of promotionEmojiPickers){
+ picker.addEventListener('toggle',()=>drawPromotionEmojiPicker(picker));
+ picker.querySelector('.promotion-emoji-search').oninput=()=>drawPromotionEmojiPicker(picker);
+ picker.querySelector('.promotion-emoji-clear').onclick=()=>choosePromotionEmoji(picker,'');
+}
 function updatePromotionOptions(){
  for(const [name, fallback, options] of [
   ['channelId','Selecione um canal',resources.channels.filter(c=>[0,5].includes(c.type))],
-  ['shopEmoji','Sem emoji',resources.emojis.map(emoji=>({id:emoji.mention,name:':'+emoji.name+':'}))],
-  ['ticketEmoji','Sem emoji',resources.emojis.map(emoji=>({id:emoji.mention,name:':'+emoji.name+':'}))],
   ['pingRoleId','Sem notificação',resources.roles]
  ]){
   const select=promotionForm.elements.namedItem(name);
@@ -170,12 +212,15 @@ function updatePromotionOptions(){
   for(const option of options)select.add(new Option(option.name,option.id));
   if(options.some(option=>option.id===value))select.value=value;
  }
+ for(const picker of promotionEmojiPickers)drawPromotionEmojiPicker(picker);
  updatePromotionPreview();
 }
 function updatePromotionPreview(){
  const data=Object.fromEntries(new FormData(promotionForm));
  $('promotion-preview').style.borderLeftColor=data.color;
- $('promotion-title').textContent=data.title.trim()||'Título da promoção';
+ const heading=$('promotion-title');
+ previewText(heading,data.headingEmoji||'');
+ heading.append(document.createTextNode((data.headingEmoji?' ':'')+(data.title.trim()||'Título da promoção')));
  previewText($('promotion-description'),data.description.trim()||'A descrição da promoção aparece aqui.');
  const image=$('promotion-image');
  let banner='';
