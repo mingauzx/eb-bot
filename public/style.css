@@ -16,3 +16,27 @@
 .promotion-preview-button{padding:8px 12px;border-radius:5px;background:#4b4d55;color:#fff;font-size:12px}
 .promotion-preview-button.ticket{background:#5865f2}
 #published-promotion{display:inline-flex}
+
+/* Central de Operações */
+:root{--accent:#dcc478;--panel:#171d19;--border:#343d33;--muted:#a5b2a5}
+body{background:radial-gradient(ellipse at 85% 0%,#3a452b66,transparent 40%),#101511}
+header{padding-block:22px}
+.insignia{color:#f2dc90;border-color:#a18c4b;background:#343522}
+.section-nav{width:fit-content;padding:5px;gap:4px;background:#151a15;border:1px solid var(--border);border-radius:12px}
+.section-nav button{padding:10px 16px;border-color:transparent;border-radius:8px}
+.section-nav [aria-pressed="true"]{background:#3b3723;border-color:#6c6036}
+#promotions-section .heading{padding-top:27px}
+#promotion-form .card{border-radius:16px;background:linear-gradient(145deg,#1e251e,var(--panel) 72%)}
+#promotion-form h2{margin-top:0}
+#promotion-form input:focus,#promotion-form select:focus,#promotion-form textarea:focus{outline-color:var(--accent)}
+.promotion-emoji-picker{margin:14px 0;border:1px solid var(--border);border-radius:10px;background:#131914;padding:0 12px}
+.promotion-emoji-picker summary{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;cursor:pointer;font-size:12px;font-weight:600}
+.promotion-emoji-picker summary::-webkit-details-marker{display:none}
+.promotion-emoji-picker summary::after{content:'⌄';color:var(--accent)}
+.promotion-emoji-picker[open] summary::after{transform:rotate(180deg)}
+.promotion-emoji-value{margin-left:auto;display:flex;align-items:center;gap:5px;color:var(--muted);overflow-wrap:anywhere}
+.promotion-emoji-grid{margin:10px 0;grid-template-columns:repeat(auto-fill,minmax(40px,1fr));color:var(--muted);font-size:12px}
+.promotion-emoji-grid .emoji-choice[aria-pressed="true"]{border-color:var(--accent);background:#3b3723}
+.promotion-emoji-clear{margin-bottom:10px}
+#promotion-form .actions{flex-wrap:wrap}
+#promotion-title .custom-emoji{width:25px!important;height:25px!important;max-height:25px!important}
