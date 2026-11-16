@@ -229,7 +229,7 @@ function updatePromotionPreview(){
  if(banner&&image.getAttribute('src')!==banner)image.src=banner;
  if(!banner)image.removeAttribute('src');
  $('promotion-buttons').replaceChildren();
- for(const [visible,label,emoji] of [[data.shopUrl,data.shopLabel.trim()||'Loja Site',data.shopEmoji],[data.ticketEnabled,data.ticketLabel.trim()||'Comprar com vendedor',data.ticketEmoji]]){
+ for(const [visible,label,emoji] of [[data.shopEnabled,data.shopLabel.trim()||'Loja Site',data.shopEmoji],[data.ticketEnabled,data.ticketLabel.trim()||'Comprar com vendedor',data.ticketEmoji]]){
   if(!visible)continue;
   const button=document.createElement('span');
   button.className='promotion-preview-button';
@@ -254,6 +254,7 @@ promotionForm.oninput=updatePromotionPreview;
 promotionForm.onsubmit=async event=>{
  event.preventDefault();
  const data=Object.fromEntries(new FormData(promotionForm));
+ data.shopEnabled=promotionForm.elements.namedItem('shopEnabled').checked;
  data.ticketEnabled=promotionForm.elements.namedItem('ticketEnabled').checked;
  const channel=promotionForm.elements.namedItem('channelId');
  if(!window.confirm('Publicar esta promoção em '+channel.selectedOptions[0].textContent+'?'))return;
