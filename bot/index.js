@@ -1,11 +1,15 @@
 import {Client,Events,GatewayIntentBits,PermissionFlagsBits} from 'discord.js';
 import {guildId,message} from '../lib/config.js';
 import {db,getConfig} from '../lib/db.js';
+import {handlePromotionTicket} from './promotion-tickets.js';
 const guild=guildId();
 if(!process.env.DISCORD_TOKEN)throw new Error('Configure DISCORD_TOKEN.');
 const client=new Client({intents:[GatewayIntentBits.Guilds,GatewayIntentBits.GuildMembers]});
 client.once(Events.ClientReady,c=>console.log('EB do Alpha conectado como '+c.user.tag));
 client.on(Events.Error,e=>console.error('Erro Discord:',e.name));
+client.on(Events.InteractionCreate,interaction=>{
+ handlePromotionTicket(interaction,guild).catch(error=>console.error('Falha na interação de promoção:',error.code||error.name));
+});
 client.on(Events.GuildMemberAdd,async member=>{
  if(member.guild.id!==guild)return;
  try {

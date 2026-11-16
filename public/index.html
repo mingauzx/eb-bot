@@ -4,6 +4,10 @@
 <header><a class="brand" href="/"><span class="insignia">A</span><span>EB DO ALPHA<small>COMANDO • CENTRAL DE BOAS-VINDAS</small></span></a><button id="logout" class="ghost" hidden>Sair da central ↗</button></header>
 <section id="login"><p class="eyebrow">ACESSO RESTRITO</p><h1>A primeira impressão<br>começa aqui.</h1><p class="muted">Entre com sua conta Discord. Acesso exclusivo a ADM, ADM Geral, Patrono e Criador do servidor.</p><a href="/api/auth/login" class="primary discord-login">Entrar com Discord →</a></section>
 <section id="dashboard" hidden>
+<nav class="section-nav" aria-label="Seções da central">
+<button type="button" id="show-welcome" class="ghost" aria-pressed="true">Boas-vindas</button>
+<button type="button" id="show-promotions" class="ghost" aria-pressed="false">Promoções</button>
+</nav><div id="welcome-section">
 <div class="heading"><div><p class="eyebrow">CENTRAL DE OPERAÇÕES / RECEPÇÃO</p><h1>Boas-vindas à tropa.</h1><p class="muted">Uma recepção à altura do EB do Alpha.</p></div><span class="badge" id="state">SISTEMA DESATIVADO</span></div>
 <div class="layout"><form id="settings">
 <section class="card"><div class="card-head"><div><p class="eyebrow">01 / SISTEMA</p><h2>Controle de recepção</h2></div><label class="toggle"><input type="checkbox" id="enabled"><span>Ativar</span></label></div><label>Canal de boas-vindas<select id="channelId"><option value="">Selecione um canal</option></select></label><button type="button" class="ghost" id="reload">↻ Atualizar canais</button></section>
@@ -11,5 +15,38 @@
 <section class="card"><div class="card-head"><div><p class="eyebrow">03 / ACESSOS RÁPIDOS</p><h2>Botões de link <span id="button-count">0/5</span></h2></div><button type="button" class="ghost" id="add">+ Adicionar</button></div><div id="buttons"></div><p class="hint">Até cinco botões. Emojis Unicode ou personalizados do Discord: &lt;:nome:id&gt;.</p></section>
 <div class="actions"><button class="primary" id="save">Salvar configurações</button><button type="button" id="test" class="ghost">Enviar teste ↗</button></div><p class="hint" id="dirty">O teste usa a última configuração salva.</p>
 </form><aside><div class="preview-title"><p class="eyebrow">PRÉ-VISUALIZAÇÃO AO VIVO</p><span>DISCORD</span></div><section class="preview"><div class="avatar">A</div><div class="message"><div class="bot-name">EB do Alpha <span>APP</span> <small>Hoje às 12:00</small></div><article id="embed" class="wide-message"><strong id="preview-title"></strong><img id="preview-image" alt="Banner de boas-vindas" hidden referrerpolicy="no-referrer"><p id="preview-description"></p><div id="preview-info-block" class="message-section" hidden><p id="preview-info"></p></div><div id="preview-closing-block" class="message-section" hidden><b id="preview-closing-title"></b><p id="preview-closing"></p></div><div id="preview-buttons"></div><small id="preview-footer"></small></article></div></section><p class="hint">Exemplo com um novo integrante. A aparência final pode variar no Discord. A descrição mostra uma aproximação da formatação Markdown.</p><div class="note"><span>✦</span><div><strong>Pronto para receber.</strong><p>Salve, envie um teste e confira o canal antes de ativar a recepção automática.</p></div></div></aside></div>
+</div>
+<section id="promotions-section" hidden>
+<div class="heading"><div><h1>Promoções</h1><p class="muted">Monte o anúncio e publique no Discord.</p></div></div>
+<div class="layout">
+<form id="promotion-form">
+<section class="card">
+<h2>Anúncio</h2>
+<label>Canal de publicação<select name="channelId" required></select></label>
+<label>Título<input name="title" maxlength="200" required placeholder="Ex.: Hoje é segunda!"></label>
+<label>Descrição <span class="muted">(Markdown do Discord)</span><textarea name="description" rows="7" maxlength="3600" required></textarea></label>
+<div class="row"><label>Cor<input name="color" type="color" value="#e7b647"></label>
+<label class="grow">URL do banner<input name="bannerUrl" type="url" maxlength="512" placeholder="https://…"></label></div>
+<label>Cargo para notificar <span class="muted">(opcional)</span><select name="pingRoleId"></select></label>
+</section>
+<section class="card">
+<h2>Botões</h2>
+<label>URL da loja<input name="shopUrl" type="url" maxlength="512" placeholder="https://…"></label>
+<label>Nome do botão da loja<input name="shopLabel" maxlength="80" placeholder="Loja Site"></label>
+<label>Categoria dos tickets<select name="categoryId"></select></label>
+<label>Cargo da equipe de atendimento<select name="staffRoleId"></select></label>
+<label>Nome do botão de ticket<input name="ticketLabel" maxlength="80" placeholder="Comprar com vendedor"></label>
+<p class="hint">Selecione categoria e cargo para habilitar o botão de ticket.</p>
+</section>
+<div class="actions"><button type="submit" class="primary" id="publish-promotion">Publicar no Discord</button><a class="ghost" id="published-promotion" target="_blank" rel="noopener noreferrer" hidden>Ver anúncio ↗</a></div>
+</form>
+<aside><div class="preview-title"><p class="eyebrow">PRÉVIA DO ANÚNCIO</p><span>DISCORD</span></div>
+<section class="preview"><div class="avatar">A</div><div class="message">
+<div class="bot-name">EB do Alpha <span>APP</span></div>
+<article id="promotion-preview" class="wide-message"><strong id="promotion-title"></strong>
+<img id="promotion-image" alt="Banner da promoção" referrerpolicy="no-referrer" hidden>
+<p id="promotion-description"></p><div id="promotion-buttons"></div>
+</article><p id="promotion-ping" class="hint" hidden></p></div></section></aside>
+</div></section>
 </section><p id="notice" role="status" aria-live="polite"></p><footer>EB DO ALPHA <span>DISCIPLINA. UNIÃO. EXCELÊNCIA.</span></footer>
 </main></body></html>

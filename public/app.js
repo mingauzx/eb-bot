@@ -129,7 +129,7 @@ async function loadResources(){
    const select=$(id);select.replaceChildren(new Option(placeholder,''));
    for(const item of resources[key])select.add(new Option(prefix+item.name,item.id));
   }
-  emojiGallery();buttonEditors();preview();
+  emojiGallery();buttonEditors();preview();updatePromotionOptions();
   const labels={channels:'canais',roles:'cargos',emojis:'emojis'};
   $('resource-status').textContent=resources.warnings.length?'Não foi possível carregar: '+resources.warnings.map(x=>labels[x]).join(', ')+'. Confira o acesso do bot e atualize.':resources.emojis.length+' emojis • '+resources.channels.length+' canais • '+resources.roles.length+' cargos';
  }catch(e){$('resource-status').textContent=e.message;}finally{$('reload-resources').disabled=false;}
@@ -156,6 +156,72 @@ Object.assign(authErrors,{
  guild_config:'Configure DISCORD_GUILD_ID com o ID do servidor EB do Alpha, não o ID de um cargo ou canal. Depois faça Redeploy.',
  bot_rate_limit:'O Discord limitou as consultas. Aguarde um pouco e inicie o login novamente.'
 });
+const promotionForm=$('promotion-form');
+function updatePromotionOptions(){
+ for(const [name, fallback, options] of [
+  ['channelId','Selecione um canal',resources.channels.filter(c=>[0,5].includes(c.type))],
+  ['categoryId','Sem botão de ticket',resources.channels.filter(c=>c.type===4)],
+  ['staffRoleId','Selecione um cargo',resources.roles],
+  ['pingRoleId','Sem notificação',resources.roles]
+ ]){
+  const select=promotionForm.elements.namedItem(name);
+  const value=select.value;
+  select.replaceChildren(new Option(fallback,''));
+  for(const option of options)select.add(new Option(option.name,option.id));
+  if(options.some(option=>option.id===value))select.value=value;
+ }
+ updatePromotionPreview();
+}
+function updatePromotionPreview(){
+ const data=Object.fromEntries(new FormData(promotionForm));
+ $('promotion-preview').style.borderLeftColor=data.color;
+ $('promotion-title').textContent=data.title.trim()||'Título da promoção';
+ previewText($('promotion-description'),data.description.trim()||'A descrição da promoção aparece aqui.');
+ const image=$('promotion-image');
+ let banner='';
+ try { const url=new URL(data.bannerUrl); if(url.protocol==='https:'&&!url.username&&!url.password)banner=url.href; } catch {}
+ image.hidden=!banner;
+ if(banner&&image.getAttribute('src')!==banner)image.src=banner;
+ if(!banner)image.removeAttribute('src');
+ $('promotion-buttons').replaceChildren();
+ for(const [visible,label,kind] of [[data.shopUrl,data.shopLabel.trim()||'Loja Site','shop'],[data.categoryId&&data.staffRoleId,data.ticketLabel.trim()||'Comprar com vendedor','ticket']]){
+  if(!visible)continue;
+  const button=document.createElement('span');
+  button.className='promotion-preview-button '+kind;
+  button.textContent=label+(kind==='shop'?' ↗':'');
+  $('promotion-buttons').append(button);
+ }
+ const role=resources.roles.find(role=>role.id===data.pingRoleId);
+ $('promotion-ping').hidden=!role;
+ $('promotion-ping').textContent=role?'@'+role.name:'';
+}
+function showPromotions(active){
+ $('welcome-section').hidden=active;
+ $('promotions-section').hidden=!active;
+ $('show-welcome').setAttribute('aria-pressed',String(!active));
+ $('show-promotions').setAttribute('aria-pressed',String(active));
+ if(active)updatePromotionOptions();
+}
+$('show-welcome').onclick=()=>showPromotions(false);
+$('show-promotions').onclick=()=>showPromotions(true);
+promotionForm.oninput=updatePromotionPreview;
+promotionForm.onsubmit=async event=>{
+ event.preventDefault();
+ const data=Object.fromEntries(new FormData(promotionForm));
+ const channel=promotionForm.elements.namedItem('channelId');
+ if(!window.confirm('Publicar esta promoção em '+channel.selectedOptions[0].textContent+'?'))return;
+ const button=$('publish-promotion');
+ button.disabled=true;
+ $('published-promotion').hidden=true;
+ try{
+  const result=await api('promotions','POST',data);
+  $('published-promotion').href=result.url;
+  $('published-promotion').hidden=false;
+  notice('Promoção publicada no Discord.');
+ }catch(error){notice(error.message,true);}
+ finally{button.disabled=false;}
+};
+
 const authError=new URLSearchParams(location.search).get('auth_error');
 if(authError){notice(authErrors[authError]||authErrors.oauth,true);history.replaceState(null,'','/');}
 try{await api('session');await load();}catch(e){show(false);if(!authError&&e.message!=='Entre com Discord para continuar.')notice(e.message,true);}

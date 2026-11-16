@@ -4,6 +4,7 @@ import {session,identity,cookie,oauthState,stateCookie,validState} from '../lib/
 import {origin,authorizationUrl,exchangeIdentity,requireRole,oauthErrorCodes} from '../lib/oauth.js';
 import {discord,channel} from '../lib/discord.js';
 import {guildResources} from '../lib/resources.js';
+import {validatePromotion,promotionMessage} from '../lib/promotions.js';
 export default async function handler(req,res) {
  const reply=(status,data)=>{res.statusCode=status;res.setHeader('Content-Type','application/json');res.end(JSON.stringify(data));};
  res.setHeader('Cache-Control','no-store');
@@ -49,6 +50,24 @@ export default async function handler(req,res) {
   if(path==='/api/session'&&req.method==='GET')return reply(200,{ok:true,userId});
   const guild=guildId();
   if(path==='/api/resources'&&req.method==='GET')return reply(200,await guildResources(guild));
+  if(path==='/api/promotions'&&req.method==='POST') {
+   let promotion;
+   try { promotion=validatePromotion(body); } catch(error) { return reply(400,{error:error.message}); }
+   if(!await limit('promotion:'+guild,5,60))return reply(429,{error:'Aguarde um minuto antes de publicar outra promoção.'});
+   const target=await discord('/channels/'+promotion.channelId);
+   if(target.guild_id!==guild||![0,5].includes(target.type))return reply(400,{error:'Escolha um canal de texto ou anúncios deste servidor.'});
+   if(promotion.categoryId) {
+    const category=await discord('/channels/'+promotion.categoryId);
+    if(category.guild_id!==guild||category.type!==4)return reply(400,{error:'Escolha uma categoria de tickets deste servidor.'});
+   }
+   const roleIds=[promotion.staffRoleId,promotion.pingRoleId].filter(Boolean);
+   if(roleIds.length) {
+    const roles=await discord('/guilds/'+guild+'/roles');
+    if(roleIds.some(id=>id===guild||!roles.some(role=>role.id===id)))return reply(400,{error:'Selecione cargos válidos deste servidor.'});
+   }
+   const sent=await discord('/channels/'+target.id+'/messages',{method:'POST',body:JSON.stringify(promotionMessage(promotion))});
+   return reply(200,{url:'https://discord.com/channels/'+guild+'/'+target.id+'/'+sent.id});
+  }
   if(path==='/api/config'&&req.method==='GET')return reply(200,await getConfig(guild)||defaults);
   if(path==='/api/channels'&&req.method==='GET') {
    const channels=await discord('/guilds/'+guild+'/channels');
