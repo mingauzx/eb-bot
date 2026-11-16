@@ -56,14 +56,9 @@ export default async function handler(req,res) {
    if(!await limit('promotion:'+guild,5,60))return reply(429,{error:'Aguarde um minuto antes de publicar outra promoção.'});
    const target=await discord('/channels/'+promotion.channelId);
    if(target.guild_id!==guild||![0,5].includes(target.type))return reply(400,{error:'Escolha um canal de texto ou anúncios deste servidor.'});
-   if(promotion.categoryId) {
-    const category=await discord('/channels/'+promotion.categoryId);
-    if(category.guild_id!==guild||category.type!==4)return reply(400,{error:'Escolha uma categoria de tickets deste servidor.'});
-   }
-   const roleIds=[promotion.staffRoleId,promotion.pingRoleId].filter(Boolean);
-   if(roleIds.length) {
+   if(promotion.pingRoleId) {
     const roles=await discord('/guilds/'+guild+'/roles');
-    if(roleIds.some(id=>id===guild||!roles.some(role=>role.id===id)))return reply(400,{error:'Selecione cargos válidos deste servidor.'});
+    if(promotion.pingRoleId===guild||!roles.some(role=>role.id===promotion.pingRoleId))return reply(400,{error:'Selecione um cargo válido deste servidor.'});
    }
    const sent=await discord('/channels/'+target.id+'/messages',{method:'POST',body:JSON.stringify(promotionMessage(promotion))});
    return reply(200,{url:'https://discord.com/channels/'+guild+'/'+target.id+'/'+sent.id});

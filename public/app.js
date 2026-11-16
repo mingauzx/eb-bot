@@ -160,8 +160,8 @@ const promotionForm=$('promotion-form');
 function updatePromotionOptions(){
  for(const [name, fallback, options] of [
   ['channelId','Selecione um canal',resources.channels.filter(c=>[0,5].includes(c.type))],
-  ['categoryId','Sem botão de ticket',resources.channels.filter(c=>c.type===4)],
-  ['staffRoleId','Selecione um cargo',resources.roles],
+  ['shopEmoji','Sem emoji',resources.emojis.map(emoji=>({id:emoji.mention,name:':'+emoji.name+':'}))],
+  ['ticketEmoji','Sem emoji',resources.emojis.map(emoji=>({id:emoji.mention,name:':'+emoji.name+':'}))],
   ['pingRoleId','Sem notificação',resources.roles]
  ]){
   const select=promotionForm.elements.namedItem(name);
@@ -184,11 +184,12 @@ function updatePromotionPreview(){
  if(banner&&image.getAttribute('src')!==banner)image.src=banner;
  if(!banner)image.removeAttribute('src');
  $('promotion-buttons').replaceChildren();
- for(const [visible,label,kind] of [[data.shopUrl,data.shopLabel.trim()||'Loja Site','shop'],[data.categoryId&&data.staffRoleId,data.ticketLabel.trim()||'Comprar com vendedor','ticket']]){
+ for(const [visible,label,emoji] of [[data.shopUrl,data.shopLabel.trim()||'Loja Site',data.shopEmoji],[data.ticketEnabled,data.ticketLabel.trim()||'Comprar com vendedor',data.ticketEmoji]]){
   if(!visible)continue;
   const button=document.createElement('span');
-  button.className='promotion-preview-button '+kind;
-  button.textContent=label+(kind==='shop'?' ↗':'');
+  button.className='promotion-preview-button';
+  if(emoji)previewText(button,emoji);
+  button.append(document.createTextNode((emoji?' ':'')+label+' ↗'));
   $('promotion-buttons').append(button);
  }
  const role=resources.roles.find(role=>role.id===data.pingRoleId);
@@ -208,6 +209,7 @@ promotionForm.oninput=updatePromotionPreview;
 promotionForm.onsubmit=async event=>{
  event.preventDefault();
  const data=Object.fromEntries(new FormData(promotionForm));
+ data.ticketEnabled=promotionForm.elements.namedItem('ticketEnabled').checked;
  const channel=promotionForm.elements.namedItem('channelId');
  if(!window.confirm('Publicar esta promoção em '+channel.selectedOptions[0].textContent+'?'))return;
  const button=$('publish-promotion');

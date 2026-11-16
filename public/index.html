@@ -33,10 +33,11 @@
 <h2>Botões</h2>
 <label>URL da loja<input name="shopUrl" type="url" maxlength="512" placeholder="https://…"></label>
 <label>Nome do botão da loja<input name="shopLabel" maxlength="80" placeholder="Loja Site"></label>
-<label>Categoria dos tickets<select name="categoryId"></select></label>
-<label>Cargo da equipe de atendimento<select name="staffRoleId"></select></label>
+<label>Emoji da loja<select name="shopEmoji"></select></label>
+<label class="toggle"><input name="ticketEnabled" type="checkbox" checked> Incluir botão de ticket</label>
 <label>Nome do botão de ticket<input name="ticketLabel" maxlength="80" placeholder="Comprar com vendedor"></label>
-<p class="hint">Selecione categoria e cargo para habilitar o botão de ticket.</p>
+<label>Emoji do ticket<select name="ticketEmoji"></select></label>
+<p class="hint">O botão de ticket leva à mensagem de atendimento existente no Discord.</p>
 </section>
 <div class="actions"><button type="submit" class="primary" id="publish-promotion">Publicar no Discord</button><a class="ghost" id="published-promotion" target="_blank" rel="noopener noreferrer" hidden>Ver anúncio ↗</a></div>
 </form>
