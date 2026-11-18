@@ -40,3 +40,143 @@ header{padding-block:22px}
 .promotion-emoji-clear{margin-bottom:10px}
 #promotion-form .actions{flex-wrap:wrap}
 #promotion-title .custom-emoji{width:25px!important;height:25px!important;max-height:25px!important}
+
+/* EB do Gandra visual refresh */
+:root {
+  --bg: #0c120e;
+  --panel: #141e17;
+  --border: #344337;
+  --muted: #b3bfb1;
+  --accent: #bdd59a;
+  --gold: #e6ce98;
+}
+
+body {
+  min-height: 100svh;
+  background:
+    radial-gradient(ellipse at 84% 5%, #25382b 0%, transparent 43%),
+    var(--bg);
+}
+
+header { padding-block: 18px; }
+.brand-mark { display: block; flex: none; }
+a:focus-visible, button:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 4px;
+}
+
+#login {
+  max-width: none;
+  margin: clamp(26px, 6vw, 88px) 0 48px;
+  padding: clamp(24px, 5vw, 72px);
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr);
+  align-items: center;
+  gap: clamp(20px, 5vw, 70px);
+  border: 1px solid #495641;
+  border-radius: 24px;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 80% 45%, #41513675, transparent 62%),
+    linear-gradient(115deg, #19241b, #101812 65%, #202a1e);
+  box-shadow: 0 22px 70px #03080566;
+}
+#login[hidden] { display: none; }
+
+.login-copy .eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--gold);
+}
+.login-copy .eyebrow::before {
+  content: "";
+  width: 18px;
+  height: 2px;
+  background: currentColor;
+}
+#login h1 {
+  margin: 16px 0;
+  font-size: clamp(46px, 8vw, 104px);
+  line-height: .92;
+  letter-spacing: -.02em;
+}
+#login h1 span { display: block; color: var(--gold); }
+.login-copy .muted { max-width: 37ch; font-size: 15px; }
+.login-copy .discord-login {
+  display: inline-flex;
+  align-items: center;
+  gap: 18px;
+  min-height: 48px;
+  border-radius: 10px;
+  margin-top: 16px;
+  padding-inline: 18px;
+  background: #c5d8a5;
+  color: #132017;
+  box-shadow: 0 6px 24px #03090555;
+}
+.login-copy .discord-login:hover { background: #dbe9be; }
+.login-access { margin: 16px 0 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+
+.login-art {
+  position: relative;
+  display: grid;
+  place-items: center;
+  justify-self: center;
+  width: min(100%, 350px);
+  aspect-ratio: 1;
+  border: 1px solid #b6a97450;
+  border-radius: 50%;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 23px, #c5d8a512 23px 24px),
+    repeating-linear-gradient(90deg, transparent 0 23px, #c5d8a512 23px 24px),
+    radial-gradient(circle, #47604377, #182319);
+  box-shadow: 0 0 60px #a6bb7727;
+}
+.login-art::before {
+  content: "";
+  position: absolute;
+  inset: 9%;
+  border: 1px dashed #e6ce9875;
+  border-radius: 50%;
+}
+.login-art img { width: 50%; height: auto; filter: drop-shadow(0 12px 20px #070f09aa); }
+
+#dashboard .heading {
+  margin: 20px 0;
+  padding: clamp(18px, 3vw, 36px);
+  border: 1px solid #445340;
+  border-radius: 18px;
+  background: linear-gradient(118deg, #263726, #152018 80%);
+}
+#dashboard .heading h1 { color: #edf1e8; }
+#dashboard .card { border-radius: 16px; box-shadow: 0 10px 30px #03080538; }
+#dashboard .card h2 { color: #e9dfc7; }
+.section-nav {
+  padding: 7px;
+  width: fit-content;
+  max-width: 100%;
+  flex-wrap: wrap;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #121b15;
+}
+.section-nav [aria-pressed=true] { box-shadow: inset 0 -2px var(--accent); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .login-copy, .login-art { animation: operations-in .48s ease-out both; }
+  .login-art { animation-delay: 80ms; }
+  .discord-login { transition: background-color .18s ease, transform .18s ease; }
+  .discord-login:hover { transform: translateY(-2px); }
+}
+@keyframes operations-in {
+  from { opacity: 0; transform: translateY(9px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 660px) {
+  #login { grid-template-columns: minmax(0, 1fr); }
+  .login-art { grid-row: 1; width: clamp(112px, 32vw, 164px); }
+  #login h1 { font-size: clamp(44px, 11vw, 65px); }
+  #dashboard .heading { flex-wrap: wrap; gap: 8px; }
+}
