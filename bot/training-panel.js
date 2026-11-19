@@ -1,8 +1,9 @@
 import {ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, MessageFlags, PermissionFlagsBits} from 'discord.js';
 import {accessibleTrainings, rankOrder, trainings} from './training-ranks.js';
 
+import {trainingButtonPrefix as buttonPrefix, trainingMenuButton as menuButton, trainingColor, trainingPanelMessage} from '../lib/training-panel.js';
+
 const panelCommand = 'scripts-treinamento';
-import {trainingButtonPrefix as buttonPrefix, trainingMenuButton as menuButton, trainingPanelMessage} from '../lib/training-panel.js';
 
 const trainingStaffRoles = new Set([
   'supervisor administrativo', 'moderador', 'administrador', 'administrador geral',
@@ -70,22 +71,57 @@ export async function handleTrainingPanel(interaction, guildId) {
 
   if (interaction.customId === menuButton) {
     const buttons = available.filter(({key}) => documentLink(key)).map(({key, label}) => new ButtonBuilder()
-      .setCustomId(buttonPrefix + key).setLabel(label).setStyle(ButtonStyle.Secondary));
+      .setCustomId(buttonPrefix + key).setLabel(label).setEmoji('📄').setStyle(ButtonStyle.Secondary));
     if (!buttons.length) {
-      await interaction.reply({content: 'Nenhum script está disponível para sua patente.', flags});
+      await interaction.reply({
+        embeds: [{
+          color: 0xc98924,
+          title: 'Nenhum script disponível',
+          description: available.length
+            ? 'Os links dos seus treinamentos estão indisponíveis no momento. Avise a administração.'
+            : 'Seu cargo ou patente ainda não dá acesso a um roteiro de treinamento.'
+        }],
+        flags
+      });
       return;
     }
     const components = [new ActionRowBuilder().addComponents(buttons.slice(0, 5))];
     if (buttons.length > 5) components.push(new ActionRowBuilder().addComponents(buttons.slice(5)));
-    await interaction.reply({content: 'Escolha um treinamento.', components, flags});
+    await interaction.reply({
+      embeds: [{
+        color: trainingColor,
+        title: '📚 Seus scripts de treinamento',
+        description: 'Selecione um treinamento abaixo para abrir o roteiro.',
+        footer: {text: 'Esta mensagem é visível apenas para você'}
+      }],
+      components,
+      flags
+    });
     return;
   }
 
   const training = available.find(({key}) => interaction.customId === buttonPrefix + key);
   const link = training && documentLink(training.key);
   if (!link) {
-    await interaction.reply({content: 'Este script está indisponível para sua patente.', flags});
+    await interaction.reply({
+      embeds: [{
+        color: 0xc98924,
+        title: 'Script indisponível',
+        description: 'Volte à Central de Treinamentos para consultar os roteiros disponíveis.'
+      }],
+      flags
+    });
     return;
   }
-  await interaction.reply({content: '[Abrir script de ' + training.label + '](<' + link + '>)', flags});
+  await interaction.reply({
+    embeds: [{
+      color: trainingColor,
+      author: {name: 'EB do Gandra • Roteiro de treinamento'},
+      title: training.label,
+      description: 'Use o botão abaixo para abrir o documento do treinamento.'
+    }],
+    components: [new ActionRowBuilder().addComponents(new ButtonBuilder()
+      .setLabel('Abrir documento').setEmoji('📄').setStyle(ButtonStyle.Link).setURL(link))],
+    flags
+  });
 }
