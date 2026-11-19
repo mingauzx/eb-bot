@@ -5,6 +5,7 @@ RUN npm install --omit=dev
 COPY server.js ./
 COPY bot ./bot
 COPY scripts/start-all.js ./scripts/start-all.js
+COPY scripts/migrate.js ./scripts/migrate.js
 COPY api ./api
 COPY lib ./lib
 COPY public ./public
