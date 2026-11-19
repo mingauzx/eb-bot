@@ -1,5 +1,5 @@
 import {ChannelType, MessageFlags, PermissionFlagsBits} from 'discord.js';
-import {accessibleTrainings, rankOrder, trainings} from './training-ranks.js';
+import {accessibleTrainings, trainings} from './training-ranks.js';
 
 import {trainingButtonPrefix as buttonPrefix, trainingMenuButton as menuButton, trainingCard, trainingPanelMessage} from '../lib/training-panel.js';
 
@@ -26,9 +26,9 @@ function documentLink(key) {
 
 export async function registerTrainingPanel(client, guildId) {
   const guild = await client.guilds.fetch(guildId);
-  const ranks = rankOrder(await guild.roles.fetch());
-  const unresolved = trainings.flatMap(item => item.minimumRoles).filter(id => !ranks.has(id));
-  if (unresolved.length) console.warn('Patentes dos treinamentos sem correspondência:', [...new Set(unresolved)].join(', '));
+  const roles = await guild.roles.fetch();
+  const unresolved = trainings.flatMap(item => item.minimumRoles).filter(id => !roles.has(id));
+  if (unresolved.length) console.warn('Cargos de treinamento ausentes no servidor:', [...new Set(unresolved)].join(', '));
   await guild.commands.create({
     name: panelCommand,
     description: 'Publica a central de scripts de treinamento neste canal',
@@ -66,7 +66,7 @@ export async function handleTrainingPanel(interaction, guildId) {
   const memberRoleIds = new Set(Array.isArray(roles) ? roles : roles?.cache.keys() ?? []);
   const guildRoles = interaction.guild.roles.cache;
   const isStaff = [...memberRoleIds].some(id => isTrainingStaff(guildRoles.get(id)));
-  const available = isStaff ? trainings : accessibleTrainings(rankOrder(guildRoles), memberRoleIds);
+  const available = isStaff ? trainings : accessibleTrainings(guildRoles, memberRoleIds);
   const flags = MessageFlags.Ephemeral;
 
   if (interaction.customId === menuButton) {

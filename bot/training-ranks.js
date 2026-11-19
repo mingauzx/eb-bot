@@ -1,8 +1,31 @@
-const rankTags = [
-  'CR', 'SCR', 'MAR', 'PRES', 'V PRES', 'CMT', 'SCMT', 'ER', 'ES', 'EM',
-  'GEN EX', 'GEN DV', 'GEN BDA', 'CEL', 'TEN-CEL', 'MAJ', 'CAP', '1° TEN',
-  '2° TEN', 'ASP', 'CT', 'ST', '1° SGT', '2° SGT', '3° SGT', 'CB', 'SLD', 'REC'
+const rankNames = [
+  ['cr', 'criador'], ['scr', 'sub criador'], ['mar', 'marechal'],
+  ['pres', 'presidente'], ['v pres', 'vice presidente'], ['cmt', 'comandante'],
+  ['scmt', 'subcomandante'], ['er', 'elite real'], ['es', 'elite secreta'],
+  ['em', 'elite militar', 'oficiais de elite', 'oficiais da elite', 'oficiais do exercito de elite'],
+  ['gen ex', 'general de exercito'], ['gen dv', 'general de divisao'],
+  ['gen bda', 'general de brigada'], ['cel', 'coronel'], ['ten-cel', 'tenente coronel'],
+  ['maj', 'major'], ['cap', 'capitao'], ['1° ten', 'primeiro tenente'],
+  ['2° ten', 'segundo tenente', 'oficiais de exercito', 'oficiais do exercito'],
+  ['asp', 'aspirante a oficial'], ['ct', 'cadete'], ['st', 'subtenente'],
+  ['1° sgt', 'primeiro sargento'], ['2° sgt', 'segundo sargento'],
+  ['3° sgt', 'terceiro sargento'], ['cb', 'cabo'], ['sld', 'soldado'], ['rec', 'recruta']
 ];
+
+const rankByName = new Map(rankNames.flatMap((names, rank) => names.map(name => [name, rank])));
+
+function normalizeRoleName(name) {
+  return name.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
+    .replace(/º/g, '°').replace(/[^a-z0-9\s°-]+/g, ' ').trim().replace(/\s+/g, ' ');
+}
+
+function roleRank(role) {
+  if (!role || role.managed) return undefined;
+  const tag = role.name.match(/\[([^\]]+)\]/)?.[1];
+  const name = role.name.replace(/\[[^\]]+\]/g, ' ');
+  return rankByName.get(normalizeRoleName(name))
+    ?? rankByName.get(normalizeRoleName(tag ?? ''));
+}
 
 export const trainings = [
   {key: 'RECRUTAMENTO', label: 'Recrutamento', minimumRoles: ['1545550460499525666']},
@@ -14,22 +37,18 @@ export const trainings = [
   {key: 'CPE', label: 'CPE', minimumRoles: ['1545550460612513877', '1545550460612513879']}
 ];
 
-export function rankOrder(roles) {
-  const candidates = new Map();
-  for (const role of roles.values()) {
-    if (role.managed) continue;
-    const tag = role.name.match(/^\s*\[([^\]]+)\]/)?.[1];
-    const rank = rankTags.indexOf(tag?.trim().toUpperCase().replace(/º/g, '°').replace(/\s+/g, ' '));
-    if (rank < 0) continue;
-    const ids = candidates.get(rank) ?? [];
-    ids.push(role.id);
-    candidates.set(rank, ids);
-  }
-  return new Map([...candidates].filter(([, ids]) => ids.length === 1).map(([rank, [id]]) => [id, rank]));
-}
-
-export function accessibleTrainings(ranks, memberRoleIds) {
-  const highestRank = Math.min(...Array.from(memberRoleIds, id => ranks.get(id) ?? Infinity));
-  return trainings.filter(({minimumRoles}) => minimumRoles.every(id => ranks.has(id))
-    && highestRank <= Math.max(...minimumRoles.map(id => ranks.get(id))));
+export function accessibleTrainings(guildRoles, memberRoleIds) {
+  const members = Array.from(memberRoleIds, id => guildRoles.get(id)).filter(role => role && !role.managed);
+  return trainings.filter(({minimumRoles}) => minimumRoles.some(id => {
+    const minimum = guildRoles.get(id);
+    if (!minimum || minimum.managed) return false;
+    const minimumRank = roleRank(minimum);
+    return members.some(member => {
+      if (member.id === minimum.id) return true;
+      const memberRank = roleRank(member);
+      if (memberRank === undefined) return false;
+      if (minimumRank !== undefined) return memberRank <= minimumRank;
+      return member.comparePositionTo(minimum) >= 0;
+    });
+  }));
 }
