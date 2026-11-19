@@ -2,12 +2,17 @@ import {Client,Events,GatewayIntentBits,PermissionFlagsBits} from 'discord.js';
 import {guildId,message} from '../lib/config.js';
 import {db,getConfig} from '../lib/db.js';
 import {handlePromotionTicket} from './promotion-tickets.js';
+import {handleTrainingPanel,registerTrainingPanel} from './training-panel.js';
 const guild=guildId();
 if(!process.env.DISCORD_TOKEN)throw new Error('Configure DISCORD_TOKEN.');
 const client=new Client({intents:[GatewayIntentBits.Guilds,GatewayIntentBits.GuildMembers]});
-client.once(Events.ClientReady,c=>console.log('EB do Alpha conectado como '+c.user.tag));
+client.once(Events.ClientReady,c=>{
+ console.log('EB do Alpha conectado como '+c.user.tag);
+ registerTrainingPanel(c,guild).catch(error=>console.error('Falha ao registrar a central de treinamentos:',error.code||error.name));
+});
 client.on(Events.Error,e=>console.error('Erro Discord:',e.name));
 client.on(Events.InteractionCreate,interaction=>{
+ handleTrainingPanel(interaction,guild).catch(error=>console.error('Falha na interação de treinamento:',error.code||error.name));
  handlePromotionTicket(interaction,guild).catch(error=>console.error('Falha na interação de promoção:',error.code||error.name));
 });
 client.on(Events.GuildMemberAdd,async member=>{
