@@ -1,7 +1,7 @@
-import {ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, MessageFlags, PermissionFlagsBits} from 'discord.js';
+import {ChannelType, MessageFlags, PermissionFlagsBits} from 'discord.js';
 import {accessibleTrainings, rankOrder, trainings} from './training-ranks.js';
 
-import {trainingButtonPrefix as buttonPrefix, trainingMenuButton as menuButton, trainingColor, trainingPanelMessage} from '../lib/training-panel.js';
+import {trainingButtonPrefix as buttonPrefix, trainingMenuButton as menuButton, trainingCard, trainingPanelMessage} from '../lib/training-panel.js';
 
 const panelCommand = 'scripts-treinamento';
 
@@ -70,58 +70,47 @@ export async function handleTrainingPanel(interaction, guildId) {
   const flags = MessageFlags.Ephemeral;
 
   if (interaction.customId === menuButton) {
-    const buttons = available.filter(({key}) => documentLink(key)).map(({key, label}) => new ButtonBuilder()
-      .setCustomId(buttonPrefix + key).setLabel(label).setEmoji('📄').setStyle(ButtonStyle.Secondary));
+    const buttons = available.filter(({key}) => documentLink(key)).map(({key, label}) => ({
+      type: 2, style: 2, custom_id: buttonPrefix + key, label
+    }));
     if (!buttons.length) {
-      await interaction.reply({
-        embeds: [{
-          color: 0xc98924,
-          title: 'Nenhum script disponível',
-          description: available.length
-            ? 'Os links dos seus treinamentos estão indisponíveis no momento. Avise a administração.'
-            : 'Seu cargo ou patente ainda não dá acesso a um roteiro de treinamento.'
-        }],
+      await interaction.reply(trainingCard({
+        title: 'Nenhum script disponível',
+        description: available.length
+          ? 'Os links dos seus treinamentos estão indisponíveis no momento. Avise a administração.'
+          : 'Seu cargo ou patente ainda não dá acesso a um roteiro de treinamento.',
+        warning: true,
         flags
-      });
+      }));
       return;
     }
-    const components = [new ActionRowBuilder().addComponents(buttons.slice(0, 5))];
-    if (buttons.length > 5) components.push(new ActionRowBuilder().addComponents(buttons.slice(5)));
-    await interaction.reply({
-      embeds: [{
-        color: trainingColor,
-        title: '📚 Seus scripts de treinamento',
-        description: 'Selecione um treinamento abaixo para abrir o roteiro.',
-        footer: {text: 'Esta mensagem é visível apenas para você'}
-      }],
-      components,
+    const rows = [buttons.slice(0, 4)];
+    if (buttons.length > 4) rows.push(buttons.slice(4));
+    await interaction.reply(trainingCard({
+      title: 'Seus scripts de treinamento',
+      description: 'Escolha um treinamento para abrir o roteiro.\n-# Esta mensagem é visível apenas para você.',
+      rows,
       flags
-    });
+    }));
     return;
   }
 
   const training = available.find(({key}) => interaction.customId === buttonPrefix + key);
   const link = training && documentLink(training.key);
   if (!link) {
-    await interaction.reply({
-      embeds: [{
-        color: 0xc98924,
-        title: 'Script indisponível',
-        description: 'Volte à Central de Treinamentos para consultar os roteiros disponíveis.'
-      }],
+    await interaction.reply(trainingCard({
+      title: 'Script indisponível',
+      description: 'Volte à Central de Treinamentos para consultar os roteiros disponíveis.',
+      warning: true,
       flags
-    });
+    }));
     return;
   }
-  await interaction.reply({
-    embeds: [{
-      color: trainingColor,
-      author: {name: 'EB do Gandra • Roteiro de treinamento'},
-      title: training.label,
-      description: 'Use o botão abaixo para abrir o documento do treinamento.'
-    }],
-    components: [new ActionRowBuilder().addComponents(new ButtonBuilder()
-      .setLabel('Abrir documento').setEmoji('📄').setStyle(ButtonStyle.Link).setURL(link))],
+
+  await interaction.reply(trainingCard({
+    title: training.label,
+    description: 'Abra o roteiro oficial deste treinamento no Google Drive.',
+    rows: [[{type: 2, style: 5, label: 'Abrir documento', url: link}]],
     flags
-  });
+  }));
 }
