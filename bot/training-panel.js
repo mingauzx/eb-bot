@@ -1,4 +1,5 @@
 import {ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, MessageFlags, PermissionFlagsBits} from 'discord.js';
+import {allowedRoles} from '../lib/oauth.js';
 import {accessibleTrainings, rankOrder, trainings} from './training-ranks.js';
 
 const panelCommand = 'scripts-treinamento';
@@ -51,8 +52,10 @@ export async function handleTrainingPanel(interaction, guildId) {
     || interaction.message.author?.id !== interaction.client.user.id) return;
 
   const roles = interaction.member?.roles;
-  const memberRoleIds = Array.isArray(roles) ? roles : roles?.cache.keys() ?? [];
-  const available = accessibleTrainings(rankOrder(interaction.guild.roles.cache), memberRoleIds);
+  const memberRoleIds = new Set(Array.isArray(roles) ? roles : roles?.cache.keys() ?? []);
+  const isAdministrator = interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)
+    || allowedRoles.some(id => memberRoleIds.has(id));
+  const available = isAdministrator ? trainings : accessibleTrainings(rankOrder(interaction.guild.roles.cache), memberRoleIds);
   const flags = MessageFlags.Ephemeral;
 
   if (interaction.customId === menuButton) {
