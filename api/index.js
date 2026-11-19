@@ -5,6 +5,7 @@ import {origin,authorizationUrl,exchangeIdentity,requireRole,oauthErrorCodes} fr
 import {discord,channel} from '../lib/discord.js';
 import {guildResources} from '../lib/resources.js';
 import {validatePromotion,promotionMessage} from '../lib/promotions.js';
+import {trainingPanelMessage} from '../lib/training-panel.js';
 export default async function handler(req,res) {
  const reply=(status,data)=>{res.statusCode=status;res.setHeader('Content-Type','application/json');res.end(JSON.stringify(data));};
  res.setHeader('Cache-Control','no-store');
@@ -50,6 +51,15 @@ export default async function handler(req,res) {
   if(path==='/api/session'&&req.method==='GET')return reply(200,{ok:true,userId});
   const guild=guildId();
   if(path==='/api/resources'&&req.method==='GET')return reply(200,await guildResources(guild));
+  if(path==='/api/training-panel'&&req.method==='POST') {
+   const id=body?.channelId;
+   if(typeof id!=='string'||!/^\d{17,20}$/.test(id))return reply(400,{error:'Selecione um canal de publicação.'});
+   if(!await limit('training-panel:'+guild,5,60))return reply(429,{error:'Aguarde um minuto antes de publicar novamente.'});
+   const target=await discord('/channels/'+id);
+   if(target.guild_id!==guild||![0,5].includes(target.type))return reply(400,{error:'Escolha um canal de texto deste servidor.'});
+   const sent=await discord('/channels/'+id+'/messages',{method:'POST',body:JSON.stringify(trainingPanelMessage())});
+   return reply(200,{url:'https://discord.com/channels/'+guild+'/'+id+'/'+sent.id});
+  }
   if(path==='/api/promotions'&&req.method==='POST') {
    let promotion;
    try { promotion=validatePromotion(body); } catch(error) { return reply(400,{error:error.message}); }

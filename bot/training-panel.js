@@ -1,9 +1,8 @@
-import {ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, EmbedBuilder, MessageFlags, PermissionFlagsBits} from 'discord.js';
+import {ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, MessageFlags, PermissionFlagsBits} from 'discord.js';
 import {accessibleTrainings, rankOrder, trainings} from './training-ranks.js';
 
 const panelCommand = 'scripts-treinamento';
-const buttonPrefix = 'eb-training:';
-const menuButton = buttonPrefix + 'menu';
+import {trainingButtonPrefix as buttonPrefix, trainingMenuButton as menuButton, trainingPanelMessage} from '../lib/training-panel.js';
 
 function documentLink(key) {
   const value = process.env['TRAINING_LINK_' + key];
@@ -39,12 +38,7 @@ export async function handleTrainingPanel(interaction, guildId) {
     }
     await interaction.deferReply({flags: MessageFlags.Ephemeral});
     try {
-      await interaction.channel.send({
-        embeds: [new EmbedBuilder().setColor(0x167044).setTitle('🇧🇷 Scripts de Treinamento')
-          .setDescription('Clique abaixo para ver os treinamentos disponíveis para sua patente.')],
-        components: [new ActionRowBuilder().addComponents(new ButtonBuilder()
-          .setCustomId(menuButton).setLabel('Ver scripts de treinamento').setStyle(ButtonStyle.Primary))]
-      });
+      await interaction.channel.send(trainingPanelMessage());
       await interaction.editReply('Central de treinamentos publicada.');
     } catch (error) {
       await interaction.editReply('Não consegui publicar a central neste canal.');

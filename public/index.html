@@ -16,6 +16,7 @@
 <nav class="section-nav" aria-label="Seções da central">
 <button type="button" id="show-welcome" class="ghost" aria-pressed="true">Boas-vindas</button>
 <button type="button" id="show-promotions" class="ghost" aria-pressed="false">Promoções</button>
+<button type="button" id="show-training" class="ghost" aria-pressed="false">Treinamentos</button>
 </nav><div id="welcome-section">
 <div class="heading"><div><p class="eyebrow">CENTRAL DE OPERAÇÕES / RECEPÇÃO</p><h1>Boas-vindas à tropa.</h1><p class="muted">Uma recepção à altura do EB do Gandra.</p></div><span class="badge" id="state">SISTEMA DESATIVADO</span></div>
 <div class="layout"><form id="settings">
@@ -78,5 +79,13 @@
 <p id="promotion-description"></p><div id="promotion-buttons"></div>
 </article><p id="promotion-ping" class="hint" hidden></p></div></section></aside>
 </div></section>
+<section id="training-section" hidden>
+<form id="training-form" class="card">
+<h2>Scripts de treinamento</h2>
+<p class="hint">Os membros recebem em privado os scripts liberados para a patente deles.</p>
+<label>Canal de publicação<select id="training-channel" name="channelId" required></select></label>
+<div class="actions"><button type="submit" class="primary" id="publish-training">Publicar no Discord</button><a class="ghost" id="published-training" target="_blank" rel="noopener noreferrer" hidden>Ver painel ↗</a></div>
+</form>
+</section>
 </section><p id="notice" role="status" aria-live="polite"></p><footer>EB DO GANDRA <span>DISCIPLINA. UNIÃO. EXCELÊNCIA.</span></footer>
 </main></body></html>

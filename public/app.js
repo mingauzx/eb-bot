@@ -241,15 +241,45 @@ function updatePromotionPreview(){
  $('promotion-ping').hidden=!role;
  $('promotion-ping').textContent=role?'@'+role.name:'';
 }
-function showPromotions(active){
- $('welcome-section').hidden=active;
- $('promotions-section').hidden=!active;
- $('show-welcome').setAttribute('aria-pressed',String(!active));
- $('show-promotions').setAttribute('aria-pressed',String(active));
- if(active)updatePromotionOptions();
+const dashboardSections = {welcome: 'welcome-section', promotions: 'promotions-section', training: 'training-section'};
+function showSection(section){
+ for(const [name,id] of Object.entries(dashboardSections)){
+  $(id).hidden=name!==section;
+  $('show-'+name).setAttribute('aria-pressed',String(name===section));
+ }
+ if(section==='promotions')updatePromotionOptions();
 }
-$('show-welcome').onclick=()=>showPromotions(false);
-$('show-promotions').onclick=()=>showPromotions(true);
+for(const section of Object.keys(dashboardSections)){
+ $('show-'+section).onclick=()=>showSection(section);
+}
+const trainingChannel=$('training-channel');
+const publishTraining=$('publish-training');
+$('show-training').onclick=async()=>{
+ showSection('training');
+ const selected=trainingChannel.value;
+ publishTraining.disabled=true;
+ try{
+  const list=await api('channels');
+  trainingChannel.replaceChildren(new Option('Selecione um canal',''),...list.map(c=>new Option('# '+c.name,c.id)));
+  if(list.some(c=>c.id===selected))trainingChannel.value=selected;
+  publishTraining.disabled=false;
+ }catch(error){notice(error.message,true);}
+};
+$('training-form').onsubmit=async event=>{
+ event.preventDefault();
+ if(publishTraining.disabled||!trainingChannel.value)return;
+ if(!window.confirm('Publicar a central em '+trainingChannel.selectedOptions[0].textContent+'?'))return;
+ publishTraining.disabled=true;
+ const published=$('published-training');
+ published.hidden=true;
+ try{
+  const result=await api('training-panel','POST',{channelId:trainingChannel.value});
+  published.href=result.url;
+  published.hidden=false;
+  notice('Central de treinamentos publicada no Discord.');
+ }catch(error){notice(error.message,true);}
+ finally{publishTraining.disabled=false;}
+};
 promotionForm.oninput=updatePromotionPreview;
 promotionForm.onsubmit=async event=>{
  event.preventDefault();
