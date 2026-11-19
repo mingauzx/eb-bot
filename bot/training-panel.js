@@ -1,9 +1,19 @@
 import {ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, MessageFlags, PermissionFlagsBits} from 'discord.js';
-import {allowedRoles} from '../lib/oauth.js';
 import {accessibleTrainings, rankOrder, trainings} from './training-ranks.js';
 
 const panelCommand = 'scripts-treinamento';
 import {trainingButtonPrefix as buttonPrefix, trainingMenuButton as menuButton, trainingPanelMessage} from '../lib/training-panel.js';
+
+const trainingStaffRoles = new Set([
+  'supervisor administrativo', 'moderador', 'administrador', 'administrador geral',
+  'adm', 'adm geral', 'criador'
+]);
+
+function isTrainingStaff(role) {
+  if (!role || role.managed) return false;
+  const name = role.name.trim().replace(/^\[[^\]]+\]\s*/, '').replace(/\s+/g, ' ').toLowerCase();
+  return trainingStaffRoles.has(name);
+}
 
 function documentLink(key) {
   const value = process.env['TRAINING_LINK_' + key];
@@ -53,9 +63,9 @@ export async function handleTrainingPanel(interaction, guildId) {
 
   const roles = interaction.member?.roles;
   const memberRoleIds = new Set(Array.isArray(roles) ? roles : roles?.cache.keys() ?? []);
-  const isAdministrator = interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)
-    || allowedRoles.some(id => memberRoleIds.has(id));
-  const available = isAdministrator ? trainings : accessibleTrainings(rankOrder(interaction.guild.roles.cache), memberRoleIds);
+  const guildRoles = interaction.guild.roles.cache;
+  const isStaff = [...memberRoleIds].some(id => isTrainingStaff(guildRoles.get(id)));
+  const available = isStaff ? trainings : accessibleTrainings(rankOrder(guildRoles), memberRoleIds);
   const flags = MessageFlags.Ephemeral;
 
   if (interaction.customId === menuButton) {
