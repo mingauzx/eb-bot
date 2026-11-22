@@ -76,7 +76,7 @@ $('add').onclick=()=>{if(config.buttons.length<5){config.buttons.push({label:'No
 $('reload').onclick=async()=>{try{await channels();notice('Canais atualizados.');}catch(e){notice(e.message,true);}};
 $('test').onclick=async()=>{if(dirty)return notice('Salve as alterações antes de enviar o teste.',true);$('test').disabled=true;try{await api('test','POST',{});notice('Mensagem de teste enviada ao canal configurado.');}catch(e){notice(e.message,true);}finally{$('test').disabled=false;}};
 $('preview-image').onerror=()=>{$('preview-image').hidden=true;};
-window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});
+window.addEventListener('beforeunload',e=>{if(dirty||embedDirty){e.preventDefault();e.returnValue='';}});
 
 function previewText(element,text){
  element.replaceChildren();
@@ -301,15 +301,47 @@ promotionForm.onsubmit=async event=>{
  finally{button.disabled=false;}
 };
 
-const authError=new URLSearchParams(location.search).get('auth_error');
-if(authError){notice(authErrors[authError]||authErrors.oauth,true);history.replaceState(null,'','/');}
-try{await api('session');await load();}catch(e){show(false);if(!authError&&e.message!=='Entre com Discord para continuar.')notice(e.message,true);}
-
 const embedsForm=$('embeds-form');
 const embedsChannel=$('embeds-channel');
 const embedLinks=$('embed-links');
 const addEmbedLink=$('add-embed-link');
 const publishEmbed=$('publish-embed');
+const saveEmbed=$('save-embed');
+const savedSelect=$('saved-embeds');
+const embedFields=['channelId','format','title','description','bannerUrl','color','footerText'];
+let savedEmbeds=[],embedId,embedBusy=false,embedDirty=false,embedsReady=false;
+function refreshEmbedControls(){
+ const published=!!savedEmbeds.find(item=>item.id===embedId)?.message_id;
+ embedsChannel.disabled=embedsForm.elements.namedItem('format').disabled=published;
+ savedSelect.disabled=$('new-embed').disabled=embedBusy||!embedsReady;
+ saveEmbed.disabled=publishEmbed.disabled=embedBusy||!embedsReady;
+ publishEmbed.textContent=published?'Atualizar no Discord':'Publicar no Discord';
+}
+function refreshSavedList(){
+ savedSelect.replaceChildren(new Option('Nova embed',''),...savedEmbeds.map(item=>new Option(item.config.title+' · '+(item.message_id?'Publicada':'Rascunho'),item.id)));
+ savedSelect.value=embedId||'';
+}
+function openSavedEmbed(id){
+ if(embedDirty&&!window.confirm('Descartar as alterações desta embed?')){savedSelect.value=embedId||'';return;}
+ const item=savedEmbeds.find(item=>item.id===id);
+ embedId=item?.id;
+ embedsForm.reset();
+ embedLinks.replaceChildren();
+ addEmbedLink.disabled=false;
+ if(item){
+  for(const key of embedFields)embedsForm.elements.namedItem(key).value=item.config[key]??'';
+  for(const button of item.config.buttons)addEmbedButton(button);
+ }
+ embedDirty=false;
+ const published=$('published-embed');
+ published.hidden=!item?.url;
+ if(item?.url)published.href=item.url;
+ refreshSavedList();
+ refreshEmbedControls();
+}
+savedSelect.onchange=()=>openSavedEmbed(savedSelect.value);
+$('new-embed').onclick=()=>openSavedEmbed('');
+embedsForm.oninput=event=>{if(!event.target.closest('.resource-tools'))embedDirty=true;};
 const embedInsertTarget=$('embed-insert-target');
 
 function insertEmbedResource(text){
@@ -318,6 +350,7 @@ function insertEmbedResource(text){
  if(field.value.length-(end-start)+text.length>field.maxLength)return notice('O campo atingiu o limite de caracteres.',true);
  field.setRangeText(text,start,end,'end');
  field.focus();
+ embedDirty=true;
 }
 function renderEmbedEmojiGallery(){
  renderEmojiGallery($('embed-emoji-gallery'),$('embed-emoji-search').value,insertEmbedResource);
@@ -343,24 +376,30 @@ $('reload-embed-resources').onclick=loadResources;
 
 $('show-embeds').onclick=async()=>{
  showSection('embeds');
- const selected=embedsChannel.value;
- publishEmbed.disabled=true;
+ if(embedsReady||embedBusy)return;
+ embedBusy=true;
+ refreshEmbedControls();
  try{
-  const channels=await api('channels');
+  const [channels,items]=await Promise.all([api('channels'),api('embeds')]);
+  savedEmbeds=items;
   embedsChannel.replaceChildren(new Option('Selecione um canal',''),...channels.map(c=>new Option('# '+c.name,c.id)));
-  if(channels.some(c=>c.id===selected))embedsChannel.value=selected;
-  publishEmbed.disabled=false;
+  for(const id of new Set(items.map(item=>item.config.channelId).filter(Boolean))){
+   if(!channels.some(channel=>channel.id===id))embedsChannel.add(new Option('Canal indisponível · '+id,id));
+  }
+  embedsReady=true;
+  refreshSavedList();
  }catch(error){notice(error.message,true);}
+ finally{embedBusy=false;refreshEmbedControls();}
 };
 
-addEmbedLink.onclick=()=>{
+function addEmbedButton(value={}){
  if(embedLinks.children.length>=5)return;
  const row=document.createElement('fieldset');
  for(const [name,label,type,maxLength] of [['label','Nome do botão','text',80],['url','Link HTTPS','url',512],['emoji','Emoji opcional','text',64]]){
   const field=document.createElement('label');
   field.textContent=label;
   const input=document.createElement('input');
-  Object.assign(input,{name,type,maxLength,required:name!=='emoji'});
+  Object.assign(input,{name,type,maxLength,required:name!=='emoji',value:value[name]??''});
   field.append(input);
   row.append(field);
  }
@@ -368,33 +407,47 @@ addEmbedLink.onclick=()=>{
  Object.assign(remove,{type:'button',className:'ghost',textContent:'Remover botão'});
  remove.onclick=()=>{
   row.remove();
+  embedDirty=true;
   addEmbedLink.disabled=false;
  };
  row.append(remove);
  embedLinks.append(row);
  addEmbedLink.disabled=embedLinks.children.length>=5;
-};
+ }
+addEmbedLink.onclick=()=>{addEmbedButton();embedDirty=true;};
 
 embedsForm.onsubmit=async event=>{
  event.preventDefault();
- if(publishEmbed.disabled||!embedsChannel.value)return;
- const form=new FormData(embedsForm);
- const payload=Object.fromEntries(['channelId','format','title','description','bannerUrl','color','footerText'].map(name=>[name,form.get(name)]));
+ if(embedBusy||!embedsReady)return;
+ const publishing=event.submitter===publishEmbed;
+ if(publishing&&!embedsChannel.value)return notice('Selecione um canal de publicação.',true);
+ const payload=Object.fromEntries(embedFields.map(name=>[name,embedsForm.elements.namedItem(name).value]));
  payload.buttons=Array.from(embedLinks.children,row=>({
   label:row.querySelector('[name="label"]').value,
   url:row.querySelector('[name="url"]').value.trim(),
   emoji:row.querySelector('[name="emoji"]').value,
   active:true
  }));
- if(!window.confirm('Publicar esta mensagem em '+embedsChannel.selectedOptions[0].textContent+'?'))return;
- publishEmbed.disabled=true;
+ const original=savedEmbeds.find(item=>item.id===embedId);
+ if(publishing&&!window.confirm(original?.message_id?'Atualizar esta mensagem no Discord?':'Publicar em '+embedsChannel.selectedOptions[0].textContent+'?'))return;
+ embedId ||= crypto.randomUUID();
+ payload.id=embedId;
+ embedBusy=true;
+ refreshEmbedControls();
  const published=$('published-embed');
- published.hidden=true;
  try{
-  const result=await api('embeds','POST',payload);
-  published.href=result.url;
-  published.hidden=false;
-  notice('Embed publicada no Discord.');
+  const result=await api('embeds',publishing?'POST':'PUT',payload);
+  savedEmbeds=[result,...savedEmbeds.filter(item=>item.id!==result.id)];
+  published.hidden=!result.url;
+  if(result.url)published.href=result.url;
+  embedDirty=false;
+  refreshSavedList();
+  notice(publishing?(original?.message_id?'Mensagem atualizada no Discord.':'Embed publicada e salva.'):'Embed salva no banco.');
  }catch(error){notice(error.message,true);}
- finally{publishEmbed.disabled=false;}
+ finally{embedBusy=false;refreshEmbedControls();}
 };
+
+const authError=new URLSearchParams(location.search).get('auth_error');
+if(authError){notice(authErrors[authError]||authErrors.oauth,true);history.replaceState(null,'','/');}
+try{await api('session');await load();}catch(e){show(false);if(!authError&&e.message!=='Entre com Discord para continuar.')notice(e.message,true);}
+

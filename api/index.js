@@ -1,5 +1,5 @@
 import {defaults,validate,guildId,message} from '../lib/config.js';
-import {getConfig,saveConfig,limit} from '../lib/db.js';
+import {getConfig,saveConfig,limit,listSavedEmbeds,writeSavedEmbed} from '../lib/db.js';
 import {session,identity,cookie,oauthState,stateCookie,validState} from '../lib/auth.js';
 import {origin,authorizationUrl,exchangeIdentity,requireRole,oauthErrorCodes} from '../lib/oauth.js';
 import {discord,channel} from '../lib/discord.js';
@@ -51,18 +51,38 @@ export default async function handler(req,res) {
   if(path==='/api/session'&&req.method==='GET')return reply(200,{ok:true,userId});
   const guild=guildId();
   if(path==='/api/resources'&&req.method==='GET')return reply(200,await guildResources(guild));
-  if(path==='/api/embeds'&&req.method==='POST') {
+  const withEmbedUrl=item=>({...item,url:item.message_id?'https://discord.com/channels/'+guild+'/'+item.config.channelId+'/'+item.message_id:null});
+  if(path==='/api/embeds'&&req.method==='GET')return reply(200,(await listSavedEmbeds(guild)).map(withEmbedUrl));
+  if(path==='/api/embeds'&&['PUT','POST'].includes(req.method)){
+   const publishing=req.method==='POST';
+   const id=body?.id;
+   if(typeof id!=='string'||!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id))return reply(400,{error:'Identificador inválido.'});
    let config;
    try{
     config=validate({...body,enabled:false,infoText:'',closingTitle:'',closingText:'',footerText:body?.footerText??''});
-    if(!config.channelId)throw new Error('Selecione um canal de publicação.');
+    if(publishing&&!config.channelId)throw new Error('Selecione um canal de publicação.');
    }catch(error){return reply(400,{error:error.message});}
-   if(!await limit('embeds:'+guild,5,60))return reply(429,{error:'Aguarde um minuto antes de publicar novamente.'});
-   const id=config.channelId;
-   const target=await discord('/channels/'+id);
-   if(target.guild_id!==guild||![0,5].includes(target.type))return reply(400,{error:'Escolha um canal de texto deste servidor.'});
-   const sent=await discord('/channels/'+id+'/messages',{method:'POST',body:JSON.stringify(message(config))});
-   return reply(200,{url:'https://discord.com/channels/'+guild+'/'+id+'/'+sent.id});
+   if(publishing){
+    if(!await limit('embeds:'+guild,5,60))return reply(429,{error:'Aguarde um minuto antes de publicar novamente.'});
+    const target=await discord('/channels/'+config.channelId);
+    if(target.guild_id!==guild||![0,5].includes(target.type))return reply(400,{error:'Escolha um canal de texto deste servidor.'});
+   }
+   const saved=await writeSavedEmbed(guild,id,config,publishing?async messageId=>{
+    const path='/channels/'+config.channelId+'/messages';
+    const payload=message(config);
+    if(!messageId){
+     payload.nonce=id.replaceAll('-','').slice(0,25);
+     payload.enforce_nonce=true;
+    }
+    try{
+     const sent=await discord(messageId?path+'/'+messageId:path,{method:messageId?'PATCH':'POST',body:JSON.stringify(payload)});
+     return sent.id;
+    }catch(error){
+     if(messageId&&error.discordStatus===404)throw Object.assign(new Error('A mensagem original foi apagada ou está indisponível. Crie uma nova embed para republicar.'),{status:404});
+     throw error;
+    }
+   }:null);
+   return reply(200,withEmbedUrl(saved));
   }
   if(path==='/api/training-panel'&&req.method==='POST') {
    const id=body?.channelId;
