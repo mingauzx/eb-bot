@@ -110,17 +110,18 @@ for(const id of textFields){
  const track=()=>{selections[id]={start:$(id).selectionStart,end:$(id).selectionEnd};$('insert-target').value=id;};
  for(const event of ['focus','click','keyup','select','input'])$(id).addEventListener(event,track);
 }
-function emojiGallery(){
- const gallery=$('emoji-gallery');gallery.replaceChildren();
- const search=$('emoji-search').value.trim().toLowerCase();
+function renderEmojiGallery(gallery,query,onSelect){
+ gallery.replaceChildren();
+ const search=query.trim().toLowerCase();
  const list=resources.emojis.filter(e=>e.name.toLowerCase().includes(search));
  for(const emoji of list){
   const button=document.createElement('button');button.type='button';button.className='emoji-choice';button.title=':'+emoji.name+':';button.setAttribute('aria-label','Inserir emoji '+emoji.name);
   const img=document.createElement('img');img.src=emoji.url;img.alt=':'+emoji.name+':';img.loading='lazy';button.append(img);
-  button.onclick=()=>insertText(emoji.mention);gallery.append(button);
+  button.onclick=()=>onSelect(emoji.mention);gallery.append(button);
  }
  if(!list.length){const p=document.createElement('p');p.className='hint';p.textContent=search?'Nenhum emoji encontrado.':'Nenhum emoji personalizado disponível.';gallery.append(p);}
 }
+function emojiGallery(){renderEmojiGallery($('emoji-gallery'),$('emoji-search').value,insertText);}
 async function loadResources(){
  $('reload-resources').disabled=true;
  try{
@@ -129,10 +130,10 @@ async function loadResources(){
    const select=$(id);select.replaceChildren(new Option(placeholder,''));
    for(const item of resources[key])select.add(new Option(prefix+item.name,item.id));
   }
-  emojiGallery();buttonEditors();preview();updatePromotionOptions();
+  updateEmbedResources();emojiGallery();buttonEditors();preview();updatePromotionOptions();
   const labels={channels:'canais',roles:'cargos',emojis:'emojis'};
   $('resource-status').textContent=resources.warnings.length?'Não foi possível carregar: '+resources.warnings.map(x=>labels[x]).join(', ')+'. Confira o acesso do bot e atualize.':resources.emojis.length+' emojis • '+resources.channels.length+' canais • '+resources.roles.length+' cargos';
- }catch(e){$('resource-status').textContent=e.message;}finally{$('reload-resources').disabled=false;}
+ }catch(e){$('resource-status').textContent=e.message;$('embed-resource-status').textContent=e.message;}finally{$('reload-resources').disabled=false;}
 }
 $('apply-template').onclick=()=>{
  const template={title:'SAUDAÇÕES, MILITAR!',description:'**Seja bem-vindo ao Exército Brasileiro do Alpha, {member}!**\nÉ um prazer receber você em nossa comunidade!',infoText:'Acesse os canais informativos para conhecer nossa instituição, consultar os recursos oficiais e conferir as orientações necessárias para sua jornada.\n\nCaso tenha alguma dúvida ou precise realizar uma solicitação, abra um atendimento no nosso suporte. Nossa equipe está à disposição para auxiliá-lo.',closingTitle:'Disciplina • Honra • Lealdade',closingText:'Desejamos a você uma excelente jornada no Exército Brasileiro do Alpha!',footerText:'EB DO GANDRA • BOAS-VINDAS'};
@@ -309,6 +310,36 @@ const embedsChannel=$('embeds-channel');
 const embedLinks=$('embed-links');
 const addEmbedLink=$('add-embed-link');
 const publishEmbed=$('publish-embed');
+const embedInsertTarget=$('embed-insert-target');
+
+function insertEmbedResource(text){
+ const field=embedsForm.elements.namedItem(embedInsertTarget.value);
+ const start=field.selectionStart,end=field.selectionEnd;
+ if(field.value.length-(end-start)+text.length>field.maxLength)return notice('O campo atingiu o limite de caracteres.',true);
+ field.setRangeText(text,start,end,'end');
+ field.focus();
+}
+function renderEmbedEmojiGallery(){
+ renderEmojiGallery($('embed-emoji-gallery'),$('embed-emoji-search').value,insertEmbedResource);
+}
+function updateEmbedResources(){
+ for(const [id,items,prefix,placeholder] of [
+  ['embed-mention-channel',resources.channels,'#','Escolha um canal'],
+  ['embed-mention-role',resources.roles,'@','Escolha um cargo']
+ ]){
+  $(id).replaceChildren(new Option(placeholder,''),...items.map(item=>new Option(prefix+item.name,item.id)));
+ }
+ renderEmbedEmojiGallery();
+ $('embed-resource-status').textContent=resources.warnings.length?'Alguns recursos do Discord estão indisponíveis.':'';
+}
+for(const [id,prefix] of [['embed-mention-channel','#'],['embed-mention-role','@&']]){
+ $(id).onchange=event=>{
+  if(event.target.value)insertEmbedResource('<'+prefix+event.target.value+'>');
+  event.target.value='';
+ };
+}
+$('embed-emoji-search').oninput=renderEmbedEmojiGallery;
+$('reload-embed-resources').onclick=loadResources;
 
 $('show-embeds').onclick=async()=>{
  showSection('embeds');
