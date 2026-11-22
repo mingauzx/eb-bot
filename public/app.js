@@ -241,7 +241,7 @@ function updatePromotionPreview(){
  $('promotion-ping').hidden=!role;
  $('promotion-ping').textContent=role?'@'+role.name:'';
 }
-const dashboardSections = {welcome: 'welcome-section', promotions: 'promotions-section', training: 'training-section'};
+const dashboardSections = {welcome: 'welcome-section', promotions: 'promotions-section', training: 'training-section', embeds: 'embeds-section'};
 function showSection(section){
  for(const [name,id] of Object.entries(dashboardSections)){
   $(id).hidden=name!==section;
@@ -303,3 +303,67 @@ promotionForm.onsubmit=async event=>{
 const authError=new URLSearchParams(location.search).get('auth_error');
 if(authError){notice(authErrors[authError]||authErrors.oauth,true);history.replaceState(null,'','/');}
 try{await api('session');await load();}catch(e){show(false);if(!authError&&e.message!=='Entre com Discord para continuar.')notice(e.message,true);}
+
+const embedsForm=$('embeds-form');
+const embedsChannel=$('embeds-channel');
+const embedLinks=$('embed-links');
+const addEmbedLink=$('add-embed-link');
+const publishEmbed=$('publish-embed');
+
+$('show-embeds').onclick=async()=>{
+ showSection('embeds');
+ const selected=embedsChannel.value;
+ publishEmbed.disabled=true;
+ try{
+  const channels=await api('channels');
+  embedsChannel.replaceChildren(new Option('Selecione um canal',''),...channels.map(c=>new Option('# '+c.name,c.id)));
+  if(channels.some(c=>c.id===selected))embedsChannel.value=selected;
+  publishEmbed.disabled=false;
+ }catch(error){notice(error.message,true);}
+};
+
+addEmbedLink.onclick=()=>{
+ if(embedLinks.children.length>=5)return;
+ const row=document.createElement('fieldset');
+ for(const [name,label,type,maxLength] of [['label','Nome do botão','text',80],['url','Link HTTPS','url',512],['emoji','Emoji opcional','text',64]]){
+  const field=document.createElement('label');
+  field.textContent=label;
+  const input=document.createElement('input');
+  Object.assign(input,{name,type,maxLength,required:name!=='emoji'});
+  field.append(input);
+  row.append(field);
+ }
+ const remove=document.createElement('button');
+ Object.assign(remove,{type:'button',className:'ghost',textContent:'Remover botão'});
+ remove.onclick=()=>{
+  row.remove();
+  addEmbedLink.disabled=false;
+ };
+ row.append(remove);
+ embedLinks.append(row);
+ addEmbedLink.disabled=embedLinks.children.length>=5;
+};
+
+embedsForm.onsubmit=async event=>{
+ event.preventDefault();
+ if(publishEmbed.disabled||!embedsChannel.value)return;
+ const form=new FormData(embedsForm);
+ const payload=Object.fromEntries(['channelId','format','title','description','bannerUrl','color','footerText'].map(name=>[name,form.get(name)]));
+ payload.buttons=Array.from(embedLinks.children,row=>({
+  label:row.querySelector('[name="label"]').value,
+  url:row.querySelector('[name="url"]').value.trim(),
+  emoji:row.querySelector('[name="emoji"]').value,
+  active:true
+ }));
+ if(!window.confirm('Publicar esta mensagem em '+embedsChannel.selectedOptions[0].textContent+'?'))return;
+ publishEmbed.disabled=true;
+ const published=$('published-embed');
+ published.hidden=true;
+ try{
+  const result=await api('embeds','POST',payload);
+  published.href=result.url;
+  published.hidden=false;
+  notice('Embed publicada no Discord.');
+ }catch(error){notice(error.message,true);}
+ finally{publishEmbed.disabled=false;}
+};
