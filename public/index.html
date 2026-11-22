@@ -17,6 +17,7 @@
 <button type="button" id="show-welcome" class="ghost" aria-pressed="true">Boas-vindas</button>
 <button type="button" id="show-promotions" class="ghost" aria-pressed="false">Promoções</button>
 <button type="button" id="show-training" class="ghost" aria-pressed="false">Treinamentos</button>
+<button type="button" id="show-embeds" class="ghost" aria-pressed="false">Embeds</button>
 </nav><div id="welcome-section">
 <div class="heading"><div><p class="eyebrow">CENTRAL DE OPERAÇÕES / RECEPÇÃO</p><h1>Boas-vindas à tropa.</h1><p class="muted">Uma recepção à altura do EB do Gandra.</p></div><span class="badge" id="state">SISTEMA DESATIVADO</span></div>
 <div class="layout"><form id="settings">
@@ -87,5 +88,20 @@
 <div class="actions"><button type="submit" class="primary" id="publish-training">Publicar no Discord</button><a class="ghost" id="published-training" target="_blank" rel="noopener noreferrer" hidden>Ver painel ↗</a></div>
 </form>
 </section>
+</section>
+<section id="embeds-section" hidden>
+<form id="embeds-form" class="card">
+<h2>Criar embed</h2>
+<label>Canal de publicação<select id="embeds-channel" name="channelId" required></select></label>
+<label>Formato<select name="format"><option value="components_v2">Components V2</option><option value="embed">Embed tradicional</option></select></label>
+<label>Título<input name="title" maxlength="256" required></label>
+<label>Descrição<textarea name="description" rows="6" maxlength="4096" required></textarea></label>
+<label>Banner ou GIF<input name="bannerUrl" type="url" placeholder="Link direto HTTPS" maxlength="512"></label>
+<label>Cor<input name="color" type="color" value="#8fa66a"></label>
+<label>Rodapé opcional<input name="footerText" maxlength="500"></label>
+<div class="card-head"><h3>Botões de link</h3><button type="button" class="ghost" id="add-embed-link">+ Adicionar</button></div>
+<div id="embed-links"></div>
+<div class="actions"><button class="primary" id="publish-embed" disabled>Publicar no Discord</button><a id="published-embed" target="_blank" rel="noopener noreferrer" hidden>Ver mensagem</a></div>
+</form>
 </section><p id="notice" role="status" aria-live="polite"></p><footer>EB DO GANDRA <span>DISCIPLINA. UNIÃO. EXCELÊNCIA.</span></footer>
 </main></body></html>
