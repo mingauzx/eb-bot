@@ -51,6 +51,19 @@ export default async function handler(req,res) {
   if(path==='/api/session'&&req.method==='GET')return reply(200,{ok:true,userId});
   const guild=guildId();
   if(path==='/api/resources'&&req.method==='GET')return reply(200,await guildResources(guild));
+  if(path==='/api/embeds'&&req.method==='POST') {
+   let config;
+   try{
+    config=validate({...body,enabled:false,infoText:'',closingTitle:'',closingText:'',footerText:body?.footerText??''});
+    if(!config.channelId)throw new Error('Selecione um canal de publicação.');
+   }catch(error){return reply(400,{error:error.message});}
+   if(!await limit('embeds:'+guild,5,60))return reply(429,{error:'Aguarde um minuto antes de publicar novamente.'});
+   const id=config.channelId;
+   const target=await discord('/channels/'+id);
+   if(target.guild_id!==guild||![0,5].includes(target.type))return reply(400,{error:'Escolha um canal de texto deste servidor.'});
+   const sent=await discord('/channels/'+id+'/messages',{method:'POST',body:JSON.stringify(message(config))});
+   return reply(200,{url:'https://discord.com/channels/'+guild+'/'+id+'/'+sent.id});
+  }
   if(path==='/api/training-panel'&&req.method==='POST') {
    const id=body?.channelId;
    if(typeof id!=='string'||!/^\d{17,20}$/.test(id))return reply(400,{error:'Selecione um canal de publicação.'});
