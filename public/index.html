@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#10150f"><title>Central de Operações • EB do Gandra</title><link rel="stylesheet" href="/style.css?v=20261117-operations"><link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%20%3Crect%20x%3D%221%22%20y%3D%221%22%20width%3D%2262%22%20height%3D%2262%22%20rx%3D%2214%22%20fill%3D%22%23151d16%22%2F%3E%20%3Cpath%20d%3D%22M32%205%2053%2013v16c0%2014-8%2023-21%2030C19%2052%2011%2043%2011%2029V13Z%22%20fill%3D%22%23293927%22%20stroke%3D%22%23d8c490%22%20stroke-width%3D%222.5%22%2F%3E%20%3Cpath%20d%3D%22M41%2023a12%2012%200%201%200%201%2017V32H32%22%20fill%3D%22none%22%20stroke%3D%22%23f0deb0%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%225%22%2F%3E%20%3C%2Fsvg%3E"><script type="module" src="/app.js"></script></head>
+<html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#10150f"><title>Central de Operações • EB do Gandra</title><link rel="stylesheet" href="/style.css?v=20261117-operations"><link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%20%3Crect%20x%3D%221%22%20y%3D%221%22%20width%3D%2262%22%20height%3D%2262%22%20rx%3D%2214%22%20fill%3D%22%23151d16%22%2F%3E%20%3Cpath%20d%3D%22M32%205%2053%2013v16c0%2014-8%2023-21%2030C19%2052%2011%2043%2011%2029V13Z%22%20fill%3D%22%23293927%22%20stroke%3D%22%23d8c490%22%20stroke-width%3D%222.5%22%2F%3E%20%3Cpath%20d%3D%22M41%2023a12%2012%200%201%200%201%2017V32H32%22%20fill%3D%22none%22%20stroke%3D%22%23f0deb0%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%225%22%2F%3E%20%3C%2Fsvg%3E"><script type="module" src="/app.js?v=20261122-embed-resources"></script></head>
 <body><main>
 <header><a class="brand" href="/"><img class="brand-mark" src="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%20%3Crect%20x%3D%221%22%20y%3D%221%22%20width%3D%2262%22%20height%3D%2262%22%20rx%3D%2214%22%20fill%3D%22%23151d16%22%2F%3E%20%3Cpath%20d%3D%22M32%205%2053%2013v16c0%2014-8%2023-21%2030C19%2052%2011%2043%2011%2029V13Z%22%20fill%3D%22%23293927%22%20stroke%3D%22%23d8c490%22%20stroke-width%3D%222.5%22%2F%3E%20%3Cpath%20d%3D%22M41%2023a12%2012%200%201%200%201%2017V32H32%22%20fill%3D%22none%22%20stroke%3D%22%23f0deb0%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%225%22%2F%3E%20%3C%2Fsvg%3E" width="44" height="44" alt=""><span>EB DO GANDRA<small>CENTRAL DE OPERAÇÕES</small></span></a><button id="logout" class="ghost" hidden>Sair da central ↗</button></header>
 <section id="login" aria-labelledby="login-title">
@@ -95,6 +95,15 @@
 <label>Canal de publicação<select id="embeds-channel" name="channelId" required></select></label>
 <label>Formato<select name="format"><option value="components_v2">Components V2</option><option value="embed">Embed tradicional</option></select></label>
 <label>Título<input name="title" maxlength="256" required></label>
+<div class="resource-tools">
+<div class="card-head"><strong>Inserir do servidor</strong><button type="button" class="ghost" id="reload-embed-resources">↻ Atualizar servidor</button></div>
+<label>Inserir em<select id="embed-insert-target"><option value="description">Descrição</option><option value="title">Título</option></select></label>
+<div class="row"><label class="grow">Mencionar canal<select id="embed-mention-channel"><option value="">Escolha um canal</option></select></label>
+<label class="grow">Mencionar cargo<select id="embed-mention-role"><option value="">Escolha um cargo</option></select></label></div>
+<label>Emojis personalizados<input id="embed-emoji-search" type="search" placeholder="Buscar emoji pelo nome" autocomplete="off"></label>
+<div id="embed-emoji-gallery" class="emoji-gallery" aria-label="Emojis do servidor"></div>
+<p id="embed-resource-status" class="hint" role="status"></p>
+</div>
 <label>Descrição<textarea name="description" rows="6" maxlength="4096" required></textarea></label>
 <label>Banner ou GIF<input name="bannerUrl" type="url" placeholder="Link direto HTTPS" maxlength="512"></label>
 <label>Cor<input name="color" type="color" value="#8fa66a"></label>
